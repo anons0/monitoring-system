@@ -114,6 +114,12 @@ backend/
 - `FERNET_KEY`: Encryption key (generate with management command)
 - `DB_*`: Supabase database credentials
 - `REDIS_*`: Redis connection details
+- `WEBHOOK_BASE_URL`: Your domain for webhook setup
+
+### Common Deployment Issues
+- **AttributeError: 'bool' object has no attribute 'lower'**: Fixed in `get_env_variable()` function - handles boolean defaults properly
+- **Missing dependencies**: Run `pip install -r requirements.txt` before deployment
+- **Redis connection**: Ensure REDIS_URL or REDIS_HOST/PORT are correctly configured
 
 ## Testing Strategy
 
