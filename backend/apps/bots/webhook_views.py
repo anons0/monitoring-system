@@ -24,8 +24,8 @@ def bot_webhook(request, bot_id: int, secret: str):
             logger.warning(f"Webhook called for non-existent bot {bot_id}")
             return HttpResponse(status=404)
         
-        # Simple secret verification (you might want to use a more sophisticated method)
-        expected_secret = hashlib.sha256(f"bot_{bot_id}_{bot.bot_id}".encode()).hexdigest()[:16]
+        # Verify webhook secret matches what AiogramManager generates
+        expected_secret = hashlib.sha256(f"bot_{bot_id}_webhook".encode()).hexdigest()[:32]
         if secret != expected_secret:
             logger.warning(f"Invalid webhook secret for bot {bot_id}")
             return HttpResponse(status=403)

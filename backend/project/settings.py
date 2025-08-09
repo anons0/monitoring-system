@@ -110,15 +110,30 @@ else:
     }
 
 # Redis for Channels
+redis_url = get_env_variable('REDIS_URL')
 redis_host = get_env_variable('REDIS_HOST', 'localhost')
 redis_port = get_env_variable('REDIS_PORT', 6379, int)
 
-# Use in-memory channel layer for development (Redis not required)
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
+# Use Redis for channels (better for production)
+if redis_url:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [redis_url],
+            },
+        },
     }
-}
+else:
+    # Fallback to Redis with separate host/port
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [(redis_host, redis_port)],
+            },
+        },
+    }
 
 # WebSocket configuration
 ASGI_APPLICATION = 'project.asgi.application'
@@ -145,6 +160,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Security settings
 FERNET_KEY = get_env_variable('FERNET_KEY', 'temp-key-generate-real-key-for-production')
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Webhook configuration
+WEBHOOK_BASE_URL = get_env_variable('WEBHOOK_BASE_URL', 'https://your-domain.com')
 
 # Authentication settings
 LOGIN_URL = '/admin/login/'
