@@ -12,7 +12,10 @@ def get_env_variable(var_name, default=None, cast_to=str):
     if value is None:
         return None
     if cast_to == bool:
-        return value.lower() in ('true', '1', 'yes', 'on')
+        # Convert to string first if it's not already a string
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() in ('true', '1', 'yes', 'on')
     elif cast_to == int:
         try:
             return int(value)
