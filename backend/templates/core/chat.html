@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ chat.title|default:chat.chat_id }} - Chat{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center">
+        <a href="{% if chat.type == 'bot_chat' %}{% url 'core:bots' %}{% else %}{% url 'core:accounts' %}{% endif %}" 
+           class="btn btn-outline-secondary me-3">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <div>
+            {{ chat.title|default:chat.chat_id }}
+            <small class="text-muted d-block">
+                {% if chat.type == 'bot_chat' %}
+                    <i class="fas fa-robot me-1"></i>{{ chat.bot.username }}
+                {% else %}
+                    <i class="fas fa-user me-1"></i>{{ chat.account.phone_number }}
+                {% endif %}
+            </small>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card" style="height: 70vh;">
+            <!-- Chat Header -->
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0">{{ chat.title|default:chat.chat_id }}</h6>
+                        <small class="text-muted">
+                            {% if chat.type == 'bot_chat' %}
+                                Bot Chat via @{{ chat.bot.username }}
+                            {% else %}
+                                Account Chat via {{ chat.account.phone_number }}
+                            {% endif %}
+                            | {{ chat.chat_type|default:"private"|title }}
+                        </small>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary" onclick="refreshChat()">
+                            <i class="fas fa-sync"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="toggleChatInfo()">
+                            <i class="fas fa-info-circle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Messages Area -->
+            <div class="card-body d-flex flex-column p-0" style="overflow: hidden;">
+                <div id="messages-container" class="flex-grow-1 p-3" style="overflow-y: auto; max-height: calc(70vh - 140px);">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="message {{ message.direction }}" data-message-id="{{ message.id }}">
+                                <div class="message-header d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted">
+                                        {% if message.direction == 'incoming' %}
+                                            <i class="fas fa-arrow-down me-1"></i>
+                                            From: {{ message.from_id }}
+                                        {% else %}
+                                            <i class="fas fa-arrow-up me-1"></i>
+                                            Sent
+                                        {% endif %}
+                                    </small>
+                                    <small class="text-muted">
+                                        {{ message.created_at|date:"H:i" }}
+                                    </small>
+                                </div>
+                                
+                                {% if message.text %}
+                                    <div class="message-text">{{ message.text|linebreaks }}</div>
+                                {% endif %}
+                                
+                                {% if message.media_type %}
+                                    <div class="message-media">
+                                        <i class="fas fa-{% if message.media_type == 'photo' %}image{% elif message.media_type == 'video' %}video{% elif message.media_type == 'audio' %}music{% elif message.media_type == 'voice' %}microphone{% elif message.media_type == 'document' %}file{% else %}paperclip{% endif %} me-2"></i>
+                                        <span class="badge bg-secondary">{{ message.media_type|title }}</span>
+                                    </div>
+                                {% endif %}
+                                
+                                {% if message.reply_to_message_id %}
+                                    <div class="message-reply mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-reply me-1"></i>
+                                            Reply to message #{{ message.reply_to_message_id }}
+                                        </small>
+                                    </div>
+                                {% endif %}
+                                
+                                {% if message.forwarded_from %}
+                                    <div class="message-forward mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-share me-1"></i>
+                                            Forwarded from {{ message.forwarded_from }}
+                                        </small>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center p-4">
+                            <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No messages in this chat yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Message Input -->
+                <div class="border-top p-3">
+                    <form id="message-form" class="d-flex align-items-center">
+                        <input type="text" id="message-input" class="form-control me-2" placeholder="Type a message..." autocomplete="off">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chat Info Panel (Hidden by default) -->
+<div id="chat-info" class="row mt-4" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Chat Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Chat Details</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Chat ID:</strong> {{ chat.chat_id }}</li>
+                            <li><strong>Type:</strong> {{ chat.chat_type|default:"private"|title }}</li>
+                            <li><strong>Source:</strong> 
+                                {% if chat.type == 'bot_chat' %}
+                                    Bot (@{{ chat.bot.username }})
+                                {% else %}
+                                    Account ({{ chat.account.phone_number }})
+                                {% endif %}
+                            </li>
+                            <li><strong>Created:</strong> {{ chat.created_at|date:"Y-m-d H:i" }}</li>
+                            <li><strong>Last Updated:</strong> {{ chat.updated_at|date:"Y-m-d H:i" }}</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Statistics</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Total Messages:</strong> {{ messages|length }}</li>
+                            <li><strong>Incoming:</strong> {{ messages|filter_by_direction:"incoming"|length }}</li>
+                            <li><strong>Outgoing:</strong> {{ messages|filter_by_direction:"outgoing"|length }}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let lastMessageId = {% if messages %}{{ messages.last.id }}{% else %}0{% endif %};
+
+document.getElementById('message-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const input = document.getElementById('message-input');
+    const message = input.value.trim();
+    
+    if (message) {
+        sendMessage(message);
+        input.value = '';
+    }
+});
+
+function sendMessage(text) {
+    // This would typically send the message via API
+    // For now, we'll just show a placeholder
+    alert('Message sending feature coming soon! This will integrate with the bot/account APIs.');
+}
+
+function refreshChat() {
+    location.reload();
+}
+
+function toggleChatInfo() {
+    const chatInfo = document.getElementById('chat-info');
+    if (chatInfo.style.display === 'none') {
+        chatInfo.style.display = 'block';
+    } else {
+        chatInfo.style.display = 'none';
+    }
+}
+
+// Auto-scroll to bottom of messages
+function scrollToBottom() {
+    const container = document.getElementById('messages-container');
+    container.scrollTop = container.scrollHeight;
+}
+
+// Scroll to bottom on page load
+window.addEventListener('load', scrollToBottom);
+
+// Auto-refresh for new messages (optional)
+function checkForNewMessages() {
+    // This would typically poll for new messages
+    // Implementation depends on your real-time strategy (WebSockets, polling, etc.)
+}
+
+// Poll for new messages every 5 seconds (optional)
+// setInterval(checkForNewMessages, 5000);
+</script>
+
+<style>
+.message {
+    margin: 0.5rem 0;
+    padding: 0.75rem;
+    border-radius: 1rem;
+    max-width: 70%;
+    animation: fadeIn 0.3s ease;
+}
+
+.message.incoming {
+    background-color: #e9ecef;
+    margin-right: auto;
+    border-bottom-left-radius: 0.25rem;
+}
+
+.message.outgoing {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 0.25rem;
+}
+
+.message-text {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.message-media {
+    margin-top: 0.5rem;
+}
+
+.message-reply, .message-forward {
+    border-left: 3px solid rgba(255,255,255,0.3);
+    padding-left: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.message.incoming .message-reply,
+.message.incoming .message-forward {
+    border-left-color: rgba(0,0,0,0.3);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#messages-container {
+    scroll-behavior: smooth;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Telegram Monitoring System{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <!-- Bot Statistics -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Total Bots</div>
+                        <div class="h2 mb-0 font-weight-bold">{{ bot_stats.total }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-robot fa-2x text-light opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Bots -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Active Bots</div>
+                        <div class="h2 mb-0 font-weight-bold">{{ bot_stats.active }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-light opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Accounts -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Total Accounts</div>
+                        <div class="h2 mb-0 font-weight-bold">{{ account_stats.total }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x text-light opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Accounts -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Active Accounts</div>
+                        <div class="h2 mb-0 font-weight-bold">{{ account_stats.active }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-user-check fa-2x text-light opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Bot Chats -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-robot me-2 text-primary"></i>
+                    Recent Bot Chats
+                </h5>
+                <a href="{% url 'core:bots' %}" class="btn btn-sm btn-outline-primary">
+                    View All <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if bot_chats %}
+                    {% for chat in bot_chats %}
+                        <div class="chat-item p-3 border-bottom">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        <a href="{% url 'core:chat' chat.id %}" class="text-decoration-none">
+                                            {{ chat.title|default:chat.chat_id }}
+                                        </a>
+                                    </h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-robot me-1"></i>
+                                        {{ chat.bot.username }}
+                                    </small>
+                                </div>
+                                {% if chat.unread_count > 0 %}
+                                    <span class="badge unread-badge rounded-pill">
+                                        {{ chat.unread_count }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center p-4">
+                        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No bot chats yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Chats -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2 text-info"></i>
+                    Recent Account Chats
+                </h5>
+                <a href="{% url 'core:accounts' %}" class="btn btn-sm btn-outline-info">
+                    View All <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if account_chats %}
+                    {% for chat in account_chats %}
+                        <div class="chat-item p-3 border-bottom">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        <a href="{% url 'core:chat' chat.id %}" class="text-decoration-none">
+                                            {{ chat.title|default:chat.chat_id }}
+                                        </a>
+                                    </h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>
+                                        {{ chat.account.phone_number }}
+                                    </small>
+                                </div>
+                                {% if chat.unread_count > 0 %}
+                                    <span class="badge unread-badge rounded-pill">
+                                        {{ chat.unread_count }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center p-4">
+                        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No account chats yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2 text-warning"></i>
+                    Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addBotModal">
+                            <i class="fas fa-plus me-2"></i>
+                            Add Bot
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-info w-100" onclick="addAccount()">
+                            <i class="fas fa-user-plus me-2"></i>
+                            Add Account
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'admin:index' %}" class="btn btn-secondary w-100">
+                            <i class="fas fa-cog me-2"></i>
+                            Admin Panel
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-success w-100" onclick="refreshData()">
+                            <i class="fas fa-sync me-2"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Bot Modal -->
+<div class="modal fade" id="addBotModal" tabindex="-1" aria-labelledby="addBotModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'core:add_bot' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addBotModalLabel">
+                        <i class="fas fa-robot me-2 text-primary"></i>
+                        Add New Bot
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="botToken" class="form-label">Bot Token</label>
+                        <input type="text" class="form-control" id="botToken" name="token" 
+                               placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz" required>
+                        <div class="form-text">
+                            Get your bot token from <a href="https://t.me/BotFather" target="_blank">@BotFather</a> on Telegram.
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>How to get a bot token:</strong>
+                        <ol class="mb-0 mt-2">
+                            <li>Open Telegram and search for <code>@BotFather</code></li>
+                            <li>Send <code>/newbot</code> command</li>
+                            <li>Follow the instructions to create your bot</li>
+                            <li>Copy the token and paste it above</li>
+                        </ol>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>
+                        Add Bot
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addAccount() {
+    alert('Account management coming soon! Use the admin panel for now.');
+}
+
+function refreshData() {
+    location.reload();
+}
+</script>
+{% endblock %}
