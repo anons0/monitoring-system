@@ -5,7 +5,7 @@
     "buildCommand": "python manage.py migrate"
   },
   "deploy": {
-    "startCommand": "daphne -b 0.0.0.0 -p $PORT project.asgi:application",
+    "startCommand": "sh -c 'daphne -b 0.0.0.0 -p ${PORT:-8000} project.asgi:application'",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
