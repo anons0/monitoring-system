@@ -100,12 +100,21 @@ def send_message(request):
                 # Send via bot using async with timeout
                 import asyncio
                 try:
-                    # Create async function with timeout
+                    # Create async function with timeout and better error handling
                     async def send_with_timeout():
-                        return await asyncio.wait_for(
-                            AiogramManager.send_message(entity_id, chat_id, text),
-                            timeout=10.0  # 10 second timeout
-                        )
+                        try:
+                            # Ensure bot is active and accessible
+                            from apps.bots.models import Bot as BotModel
+                            bot = await asyncio.to_thread(BotModel.objects.get, id=entity_id, status='active')
+                            logger.info(f"Sending message via bot {bot.username} to chat {chat_id}")
+                            
+                            return await asyncio.wait_for(
+                                AiogramManager.send_message(entity_id, chat_id, text),
+                                timeout=15.0  # Increased timeout to 15 seconds
+                            )
+                        except BotModel.DoesNotExist:
+                            logger.error(f"Bot {entity_id} not found or not active")
+                            raise ValueError(f"Bot {entity_id} not found or not active")
                     
                     message = asyncio.run(send_with_timeout())
                     return JsonResponse({
@@ -115,6 +124,9 @@ def send_message(request):
                 except asyncio.TimeoutError:
                     logger.error(f"Timeout sending bot message to chat {chat_id}")
                     return JsonResponse({'error': 'Message sending timed out'}, status=504)
+                except ValueError as e:
+                    logger.error(f"Bot error: {e}")
+                    return JsonResponse({'error': str(e)}, status=400)
                 except Exception as e:
                     logger.error(f"Error sending bot message: {e}")
                     return JsonResponse({'error': f'Failed to send bot message: {str(e)}'}, status=500)
@@ -123,12 +135,21 @@ def send_message(request):
                 # Send via account using async with timeout
                 import asyncio
                 try:
-                    # Create async function with timeout
+                    # Create async function with timeout and better error handling
                     async def send_account_with_timeout():
-                        return await asyncio.wait_for(
-                            TelethonManager.send_message(entity_id, chat_id, text),
-                            timeout=10.0  # 10 second timeout
-                        )
+                        try:
+                            # Ensure account is active and accessible
+                            from apps.accounts.models import Account as AccountModel
+                            account = await asyncio.to_thread(AccountModel.objects.get, id=entity_id, status='active')
+                            logger.info(f"Sending message via account {account.phone} to chat {chat_id}")
+                            
+                            return await asyncio.wait_for(
+                                TelethonManager.send_message(entity_id, chat_id, text),
+                                timeout=15.0  # Increased timeout to 15 seconds
+                            )
+                        except AccountModel.DoesNotExist:
+                            logger.error(f"Account {entity_id} not found or not active")
+                            raise ValueError(f"Account {entity_id} not found or not active")
                     
                     message = asyncio.run(send_account_with_timeout())
                     return JsonResponse({
@@ -138,6 +159,9 @@ def send_message(request):
                 except asyncio.TimeoutError:
                     logger.error(f"Timeout sending account message to chat {chat_id}")
                     return JsonResponse({'error': 'Message sending timed out'}, status=504)
+                except ValueError as e:
+                    logger.error(f"Account error: {e}")
+                    return JsonResponse({'error': str(e)}, status=400)
                 except Exception as e:
                     logger.error(f"Error sending account message: {e}")
                     return JsonResponse({'error': f'Failed to send account message: {str(e)}'}, status=500)

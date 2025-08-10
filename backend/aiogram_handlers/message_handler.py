@@ -60,6 +60,9 @@ class MessageHandler:
             logger.info(f"✅ Successfully saved message from {user.username or user.first_name} in chat {chat.title or chat.chat_id}")
             logger.info(f"📝 Message saved with ID: {saved_message.id}")
             
+            # Handle auto-reply for non-command messages
+            await self._handle_auto_reply(bot, message, chat)
+            
         except Exception as e:
             logger.error(f"❌ Error handling message: {e}")
             import traceback
@@ -310,3 +313,69 @@ class MessageHandler:
             logger.error(f"Failed to send notification: {e}")
         
         return message
+    
+    async def _handle_auto_reply(self, bot, message: types.Message, chat):
+        """Handle auto-reply for non-command messages"""
+        try:
+            # Skip if message is empty or None
+            if not message.text:
+                return
+            
+            # Skip if message is a command (starts with /)
+            if message.text.startswith('/'):
+                logger.info(f"Skipping auto-reply for command: {message.text}")
+                return
+            
+            # Check if bot has auto-reply enabled
+            if not bot.auto_reply_enabled or not bot.auto_reply_message:
+                logger.info(f"Auto-reply disabled for bot {bot.id}")
+                return
+            
+            # Send auto-reply message
+            from aiogram import Bot as AiogramBot
+            from apps.core.encryption import encryption_service
+            from asgiref.sync import sync_to_async
+            
+            try:
+                # Get bot token
+                token = await sync_to_async(encryption_service.decrypt)(bot.token_enc)
+                aiogram_bot = AiogramBot(token=token)
+                
+                # Send auto-reply
+                await aiogram_bot.send_message(
+                    chat_id=message.chat.id,
+                    text=bot.auto_reply_message,
+                    parse_mode='HTML'
+                )
+                
+                # Close bot session
+                await aiogram_bot.session.close()
+                
+                logger.info(f"✅ Sent auto-reply to chat {message.chat.id} from bot {bot.id}")
+                
+                # Save auto-reply as outgoing message
+                from apps.messages.models import Message
+                try:
+                    def create_auto_reply_message():
+                        return Message.objects.create(
+                            chat=chat,
+                            message_id=0,  # We don't have message_id for auto-reply
+                            from_id=bot.bot_id,
+                            text=bot.auto_reply_message,
+                            direction='outgoing',
+                            payload={'auto_reply': True, 'sent_via': 'auto_reply'}
+                        )
+                    
+                    await sync_to_async(create_auto_reply_message)()
+                    logger.info(f"💾 Saved auto-reply message to database")
+                    
+                except Exception as save_error:
+                    logger.error(f"❌ Failed to save auto-reply message: {save_error}")
+                
+            except Exception as send_error:
+                logger.error(f"❌ Failed to send auto-reply: {send_error}")
+            
+        except Exception as e:
+            logger.error(f"❌ Error in auto-reply handler: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")

@@ -18,6 +18,7 @@ urlpatterns = [
     path('<int:bot_id>/update-menu-button/', views.update_menu_button, name='update_menu_button'),
     path('<int:bot_id>/update-commands/', views.update_commands, name='update_commands'),
     path('<int:bot_id>/delete/', views.delete_bot, name='delete_bot'),
+    path('<int:bot_id>/auto-reply/', views.update_auto_reply, name='update_auto_reply'),
     path('api/bots/<int:bot_id>/', api_views.get_bot_detail, name='bot_detail'),
     path('api/bots/<int:bot_id>/update-profile/', api_views.update_bot_profile, name='update_bot_profile'),
 ]
