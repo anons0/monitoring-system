@@ -237,10 +237,22 @@ function sendMessage(text) {
     });
 }
 
-function addMessageToUI(text, direction) {
+function addMessageToUI(text, direction, messageId = null) {
     const messagesContainer = document.getElementById('messages-container');
+    
+    // Check if message already exists (prevent duplicates)
+    if (messageId && document.querySelector(`[data-message-id="${messageId}"]`)) {
+        return; // Message already exists, don't add duplicate
+    }
+    
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${direction}`;
+    messageDiv.className = `message ${direction} temporary-message`;
+    if (messageId) {
+        messageDiv.setAttribute('data-message-id', messageId);
+    } else {
+        // Use timestamp as temporary ID for immediate UI updates
+        messageDiv.setAttribute('data-temp-id', Date.now());
+    }
     
     const now = new Date();
     const timeString = now.toLocaleTimeString('en-US', { 
@@ -302,14 +314,34 @@ function scrollToBottom() {
 // Scroll to bottom on page load
 window.addEventListener('load', scrollToBottom);
 
-// Auto-refresh for new messages (optional)
-function checkForNewMessages() {
-    // This would typically poll for new messages
-    // Implementation depends on your real-time strategy (WebSockets, polling, etc.)
+// Handle WebSocket notifications for this chat
+document.addEventListener('telegramNotification', function(e) {
+    const notification = e.detail;
+    
+    // Only handle message notifications for this chat
+    if (notification.type === 'new_message' && 
+        notification.data && 
+        notification.data.chat_id === {{ chat.id }}) {
+        
+        // Remove any temporary message that might be a duplicate
+        removeTemporaryMessages();
+        
+        // Refresh the page to show the new message properly
+        // This ensures server-side rendering handles the message correctly
+        setTimeout(() => {
+            location.reload();
+        }, 500);
+    }
+});
+
+// Remove temporary messages (those added by addMessageToUI)
+function removeTemporaryMessages() {
+    const tempMessages = document.querySelectorAll('.temporary-message');
+    tempMessages.forEach(msg => msg.remove());
 }
 
-// Poll for new messages every 5 seconds (optional)
-// setInterval(checkForNewMessages, 5000);
+// Clean up temporary messages after a delay (fallback)
+setTimeout(removeTemporaryMessages, 10000); // Remove after 10 seconds
 </script>
 
 <style>
