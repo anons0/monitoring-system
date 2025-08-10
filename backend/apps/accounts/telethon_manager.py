@@ -194,16 +194,23 @@ class TelethonManager:
             
             try:
                 chat_obj = await Chat.objects.aget(account_id=account_id, chat_id=chat_id)
+                me = await client.get_me()
                 await Message.objects.acreate(
                     chat=chat_obj,
                     message_id=message.id,
-                    from_id=client.get_me().id,
+                    from_id=me.id,
                     text=text,
                     direction='outgoing',
-                    payload={'sent_via': 'api'}
+                    payload={
+                        'sent_via': 'web_api',
+                        'date': message.date.isoformat() if message.date else None
+                    }
                 )
+                logger.info(f"✅ Saved outgoing message for account {account_id} via web API")
             except Chat.DoesNotExist:
                 logger.warning(f"Chat {chat_id} not found for account {account_id}")
+            except Exception as e:
+                logger.error(f"Error saving outgoing message: {e}")
             
             return message
             

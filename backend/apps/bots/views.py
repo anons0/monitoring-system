@@ -1,8 +1,11 @@
 import logging
+import json
 from django.http import JsonResponse
+from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
+from django.contrib import messages
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -88,3 +91,168 @@ def test_bot(request, bot_id):
     except Exception as e:
         logger.error(f"Error testing bot {bot_id}: {e}")
         return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def bot_settings(request, bot_id):
+    """Display bot settings page"""
+    bot = get_object_or_404(Bot, id=bot_id)
+    return render(request, 'core/bot_settings.html', {'bot': bot})
+
+@login_required
+def update_basic_info(request, bot_id):
+    """Update bot basic information"""
+    if request.method == 'POST':
+        try:
+            bot = get_object_or_404(Bot, id=bot_id)
+            
+            # Update basic fields
+            bot.first_name = request.POST.get('first_name', '')
+            bot.description = request.POST.get('description', '')
+            bot.short_description = request.POST.get('short_description', '')
+            
+            # Handle profile photo upload
+            if 'profile_photo' in request.FILES:
+                bot.profile_photo = request.FILES['profile_photo']
+            
+            # Mark profile as pending update
+            bot.profile_update_pending = True
+            bot.save()
+            
+            # Check if we should update on Telegram
+            if request.POST.get('action') == 'save_and_update':
+                try:
+                    from .profile_service import BotProfileService
+                    success = BotProfileService.update_bot_profile(bot)
+                    if success:
+                        from django.utils import timezone
+                        bot.profile_update_pending = False
+                        bot.profile_last_updated = timezone.now()
+                        bot.save()
+                        messages.success(request, 'Bot basic information updated successfully on Telegram!')
+                    else:
+                        messages.warning(request, 'Bot information saved locally, but failed to update on Telegram.')
+                except Exception as e:
+                    logger.error(f"Error updating bot profile on Telegram: {e}")
+                    messages.warning(request, f'Bot information saved locally, but failed to update on Telegram: {str(e)}')
+            else:
+                messages.success(request, 'Bot basic information saved successfully!')
+            
+        except Exception as e:
+            logger.error(f"Error updating bot basic info: {e}")
+            messages.error(request, f'Error updating bot information: {str(e)}')
+    
+    return redirect('bots:bot_settings', bot_id=bot_id)
+
+@login_required
+def update_menu_button(request, bot_id):
+    """Update bot menu button"""
+    if request.method == 'POST':
+        try:
+            bot = get_object_or_404(Bot, id=bot_id)
+            
+            # Update menu button fields
+            bot.menu_button_text = request.POST.get('menu_button_text', '')
+            bot.menu_button_url = request.POST.get('menu_button_url', '')
+            
+            # Mark profile as pending update
+            bot.profile_update_pending = True
+            bot.save()
+            
+            # Check if we should update on Telegram
+            if request.POST.get('action') == 'save_and_update':
+                try:
+                    from .profile_service import BotProfileService
+                    success = BotProfileService.update_bot_menu_button(bot)
+                    if success:
+                        from django.utils import timezone
+                        bot.profile_update_pending = False
+                        bot.profile_last_updated = timezone.now()
+                        bot.save()
+                        messages.success(request, 'Menu button updated successfully on Telegram!')
+                    else:
+                        messages.warning(request, 'Menu button saved locally, but failed to update on Telegram.')
+                except Exception as e:
+                    logger.error(f"Error updating menu button on Telegram: {e}")
+                    messages.warning(request, f'Menu button saved locally, but failed to update on Telegram: {str(e)}')
+            else:
+                messages.success(request, 'Menu button saved successfully!')
+            
+        except Exception as e:
+            logger.error(f"Error updating menu button: {e}")
+            messages.error(request, f'Error updating menu button: {str(e)}')
+    
+    return redirect('bots:bot_settings', bot_id=bot_id)
+
+@login_required
+def update_commands(request, bot_id):
+    """Update bot commands"""
+    if request.method == 'POST':
+        try:
+            bot = get_object_or_404(Bot, id=bot_id)
+            
+            # Collect commands
+            commands = []
+            command_names = request.POST.getlist('command_name[]')
+            command_descriptions = request.POST.getlist('command_description[]')
+            
+            for name, description in zip(command_names, command_descriptions):
+                name = name.strip()
+                description = description.strip()
+                if name and description:
+                    commands.append({'command': name, 'description': description})
+            
+            bot.commands = commands
+            bot.profile_update_pending = True
+            bot.save()
+            
+            # Check if we should update on Telegram
+            if request.POST.get('action') == 'save_and_update':
+                try:
+                    from .profile_service import BotProfileService
+                    success = BotProfileService.update_bot_commands(bot)
+                    if success:
+                        from django.utils import timezone
+                        bot.profile_update_pending = False
+                        bot.profile_last_updated = timezone.now()
+                        bot.save()
+                        messages.success(request, 'Bot commands updated successfully on Telegram!')
+                    else:
+                        messages.warning(request, 'Commands saved locally, but failed to update on Telegram.')
+                except Exception as e:
+                    logger.error(f"Error updating commands on Telegram: {e}")
+                    messages.warning(request, f'Commands saved locally, but failed to update on Telegram: {str(e)}')
+            else:
+                messages.success(request, 'Bot commands saved successfully!')
+            
+        except Exception as e:
+            logger.error(f"Error updating commands: {e}")
+            messages.error(request, f'Error updating commands: {str(e)}')
+    
+    return redirect('bots:bot_settings', bot_id=bot_id)
+
+@login_required
+def delete_bot(request, bot_id):
+    """Delete a bot"""
+    if request.method == 'POST':
+        try:
+            bot = get_object_or_404(Bot, id=bot_id)
+            bot_username = bot.username
+            
+            # Stop the bot first
+            try:
+                BotService.stop_bot(bot)
+            except Exception as e:
+                logger.warning(f"Error stopping bot before deletion: {e}")
+            
+            # Delete the bot
+            bot.delete()
+            
+            messages.success(request, f'Bot @{bot_username} deleted successfully!')
+            return redirect('core:bots')
+            
+        except Exception as e:
+            logger.error(f"Error deleting bot: {e}")
+            messages.error(request, f'Error deleting bot: {str(e)}')
+            return redirect('bots:bot_settings', bot_id=bot_id)
+    
+    return redirect('bots:bot_settings', bot_id=bot_id)

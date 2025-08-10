@@ -75,19 +75,25 @@ class MessageViewSet(viewsets.ModelViewSet):
         message.save()
         return Response({'status': 'marked_read'})
 
-@login_required
 @csrf_exempt
+@login_required
 def send_message(request):
     """Send a message via bot or account"""
     if request.method == 'POST':
         try:
-            data = json.loads(request.body)
+            # Handle both JSON and form data
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+            else:
+                data = request.POST
+                
             chat_id = data.get('chat_id')
             text = data.get('text')
             entity_type = data.get('entity_type')  # 'bot' or 'account'
             entity_id = data.get('entity_id')
             
             if not all([chat_id, text, entity_type, entity_id]):
+                logger.error(f"Missing required fields - chat_id: {chat_id}, text: {text}, entity_type: {entity_type}, entity_id: {entity_id}")
                 return JsonResponse({'error': 'Missing required fields'}, status=400)
             
             if entity_type == 'bot':
@@ -138,10 +144,13 @@ def send_message(request):
             else:
                 return JsonResponse({'error': 'Invalid entity_type'}, status=400)
                 
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error: {e}")
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
         except Exception as e:
             logger.error(f"Error sending message: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return JsonResponse({'error': str(e)}, status=500)
     
     return JsonResponse({'error': 'Method not allowed'}, status=405)

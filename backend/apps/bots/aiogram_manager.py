@@ -36,6 +36,9 @@ class AiogramManager:
             dp.message.register(handler.handle_message)
             dp.edited_message.register(handler.handle_edited_message)
             
+            # Note: aiogram bots cannot listen to their own outgoing messages
+            # Outgoing messages are tracked when sent via the web API in send_message method
+            
             # Store instances
             cls._bots[bot_id] = bot
             cls._dispatchers[bot_id] = dp

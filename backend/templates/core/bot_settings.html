@@ -1,0 +1,455 @@
+{% extends 'base.html' %}
+
+{% block title %}Bot Settings - {{ bot.username }}{% endblock %}
+
+{% block page_title %}
+<div class="d-flex align-items-center">
+    <a href="{% url 'core:bots' %}" class="btn btn-outline-secondary me-3">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+    <i class="fas fa-robot me-2 text-primary"></i>
+    {{ bot.username }} Settings
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-user me-2"></i>
+                    Basic Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'bots:update_basic_info' bot.id %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="first_name" class="form-label">Display Name</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                       value="{{ bot.first_name|default:'' }}" placeholder="Bot Display Name">
+                                <div class="form-text">The name shown in Telegram</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="short_description" class="form-label">Short Description</label>
+                                <input type="text" class="form-control" id="short_description" 
+                                       name="short_description" value="{{ bot.short_description|default:'' }}"
+                                       maxlength="120" placeholder="Brief description (up to 120 characters)">
+                                <div class="form-text">Short description for bot</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="profile_photo" class="form-label">Profile Photo</label>
+                                <input type="file" class="form-control" id="profile_photo" 
+                                       name="profile_photo" accept="image/*">
+                                <div class="form-text">JPG, PNG, or GIF. Max 10MB.</div>
+                            </div>
+                            
+                            {% if bot.profile_photo_url %}
+                            <div class="mb-3">
+                                <label class="form-label">Current Photo</label>
+                                <div>
+                                    <img src="{{ bot.profile_photo_url }}" alt="Current bot photo" 
+                                         class="img-thumbnail" style="max-width: 150px;">
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" 
+                                  rows="3" maxlength="512" placeholder="Bot description (up to 512 characters)">{{ bot.description|default:'' }}</textarea>
+                        <div class="form-text">Full bot description</div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" name="action" value="save_only" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>
+                            Save Changes
+                        </button>
+                        <button type="submit" name="action" value="save_and_update" class="btn btn-primary">
+                            <i class="fas fa-upload me-2"></i>
+                            Save & Update on Telegram
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bars me-2"></i>
+                    Menu Button
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'bots:update_menu_button' bot.id %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="menu_button_text" class="form-label">Menu Button Text</label>
+                                <input type="text" class="form-control" id="menu_button_text" 
+                                       name="menu_button_text" value="{{ bot.menu_button_text|default:'' }}"
+                                       maxlength="64" placeholder="Menu button text">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="menu_button_url" class="form-label">Menu Button URL</label>
+                                <input type="url" class="form-control" id="menu_button_url" 
+                                       name="menu_button_url" value="{{ bot.menu_button_url|default:'' }}"
+                                       placeholder="https://example.com">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" name="action" value="save_only" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>
+                            Save Changes
+                        </button>
+                        <button type="submit" name="action" value="save_and_update" class="btn btn-primary">
+                            <i class="fas fa-upload me-2"></i>
+                            Save & Update on Telegram
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-terminal me-2"></i>
+                    Bot Commands
+                </h5>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addCommand()">
+                    <i class="fas fa-plus me-1"></i>
+                    Add Command
+                </button>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'bots:update_commands' bot.id %}" id="commandsForm">
+                    {% csrf_token %}
+                    <div id="commandsContainer">
+                        {% if bot.commands %}
+                            {% for command in bot.commands %}
+                                <div class="command-item mb-3 p-3 border rounded">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Command</label>
+                                            <input type="text" class="form-control" name="command_name[]" 
+                                                   value="{{ command.command }}" placeholder="start" maxlength="32">
+                                        </div>
+                                        <div class="col-md-7">
+                                            <label class="form-label">Description</label>
+                                            <input type="text" class="form-control" name="command_description[]" 
+                                                   value="{{ command.description }}" placeholder="Start the bot" maxlength="256">
+                                        </div>
+                                        <div class="col-md-1 d-flex align-items-end">
+                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeCommand(this)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="command-item mb-3 p-3 border rounded">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Command</label>
+                                        <input type="text" class="form-control" name="command_name[]" 
+                                               placeholder="start" maxlength="32">
+                                    </div>
+                                    <div class="col-md-7">
+                                        <label class="form-label">Description</label>
+                                        <input type="text" class="form-control" name="command_description[]" 
+                                               placeholder="Start the bot" maxlength="256">
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-end">
+                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeCommand(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" name="action" value="save_only" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>
+                            Save Commands
+                        </button>
+                        <button type="submit" name="action" value="save_and_update" class="btn btn-primary">
+                            <i class="fas fa-upload me-2"></i>
+                            Save & Update on Telegram
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Bot Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Status</label>
+                    <div>
+                        {% if bot.status == 'active' %}
+                            <span class="badge bg-success fs-6">
+                                <i class="fas fa-check-circle me-1"></i>
+                                Active
+                            </span>
+                        {% elif bot.status == 'inactive' %}
+                            <span class="badge bg-secondary fs-6">
+                                <i class="fas fa-pause-circle me-1"></i>
+                                Inactive
+                            </span>
+                        {% else %}
+                            <span class="badge bg-danger fs-6">
+                                <i class="fas fa-exclamation-circle me-1"></i>
+                                Error
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Bot ID</label>
+                    <p class="text-muted mb-0">{{ bot.bot_id }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Username</label>
+                    <p class="text-muted mb-0">@{{ bot.username }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Last Seen</label>
+                    <p class="text-muted mb-0">
+                        {% if bot.last_seen %}
+                            {{ bot.last_seen|timesince }} ago
+                        {% else %}
+                            Never
+                        {% endif %}
+                    </p>
+                </div>
+                
+                {% if bot.profile_update_pending %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-clock me-2"></i>
+                    Profile update pending
+                </div>
+                {% endif %}
+                
+                <div class="d-grid gap-2">
+                    {% if bot.status == 'active' %}
+                        <form method="post" action="{% url 'core:stop_bot' bot.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-warning w-100">
+                                <i class="fas fa-stop me-2"></i>
+                                Stop Bot
+                            </button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{% url 'core:start_bot' bot.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="fas fa-play me-2"></i>
+                                Start Bot
+                            </button>
+                        </form>
+                    {% endif %}
+                    
+                    <form method="post" action="{% url 'core:test_bot' bot.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-info w-100">
+                            <i class="fas fa-vial me-2"></i>
+                            Test Bot
+                        </button>
+                    </form>
+                    
+                    <button class="btn btn-outline-primary w-100" onclick="syncFromTelegram()">
+                        <i class="fas fa-sync me-2"></i>
+                        Sync from Telegram
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0 text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Danger Zone
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    Once you delete a bot, there is no going back. This will remove all associated chats and messages.
+                </p>
+                <button class="btn btn-danger w-100" onclick="deleteBot()">
+                    <i class="fas fa-trash me-2"></i>
+                    Delete Bot
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addCommand() {
+    const container = document.getElementById('commandsContainer');
+    const commandItem = document.createElement('div');
+    commandItem.className = 'command-item mb-3 p-3 border rounded';
+    commandItem.innerHTML = `
+        <div class="row">
+            <div class="col-md-4">
+                <label class="form-label">Command</label>
+                <input type="text" class="form-control" name="command_name[]" 
+                       placeholder="start" maxlength="32">
+            </div>
+            <div class="col-md-7">
+                <label class="form-label">Description</label>
+                <input type="text" class="form-control" name="command_description[]" 
+                       placeholder="Start the bot" maxlength="256">
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeCommand(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    container.appendChild(commandItem);
+}
+
+function removeCommand(button) {
+    const commandItem = button.closest('.command-item');
+    commandItem.remove();
+    
+    // If no commands left, add one empty command
+    if (document.querySelectorAll('.command-item').length === 0) {
+        addCommand();
+    }
+}
+
+function syncFromTelegram() {
+    if (confirm('This will fetch the latest bot information from Telegram. Continue?')) {
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Syncing...';
+        btn.disabled = true;
+        
+        fetch(`/bots/api/bots/{{ bot.id }}/sync-profile/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Bot profile synced successfully from Telegram!');
+                location.reload();
+            } else {
+                alert('Error syncing bot profile: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error syncing bot profile:', error);
+            alert('Error syncing bot profile. Please try again.');
+        })
+        .finally(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+}
+
+function deleteBot() {
+    if (confirm('Are you sure you want to delete this bot? This will remove all associated chats and messages.')) {
+        if (confirm('This action cannot be undone. Are you absolutely sure?')) {
+            // Create a form to delete the bot
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{% url 'bots:delete_bot' bot.id %}';
+            
+            const csrfToken = getCookie('csrftoken');
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Show success/error messages
+{% if messages %}
+    {% for message in messages %}
+        {% if message.tags == 'success' %}
+            setTimeout(() => {
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success alert-dismissible fade show';
+                alert.innerHTML = `
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('.content').prepend(alert);
+            }, 100);
+        {% elif message.tags == 'error' %}
+            setTimeout(() => {
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-danger alert-dismissible fade show';
+                alert.innerHTML = `
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('.content').prepend(alert);
+            }, 100);
+        {% endif %}
+    {% endfor %}
+{% endif %}
+</script>
+{% endblock %}
