@@ -22,6 +22,11 @@
 {% endblock %}
 
 {% block content %}
+<!-- Override Django messages for chat page - we don't want alerts here -->
+<style>
+.alert { display: none !important; }
+</style>
+
 <div class="row">
     <div class="col-12">
         <div class="card" style="height: 70vh;">
@@ -231,9 +236,11 @@ function sendMessage(text) {
         alert('Error sending message. Please try again.');
     })
     .finally(() => {
-        // Restore button
-        submitButton.innerHTML = originalButtonContent;
-        submitButton.disabled = false;
+        // Always restore button state
+        setTimeout(() => {
+            submitButton.innerHTML = originalButtonContent;
+            submitButton.disabled = false;
+        }, 100); // Small delay to ensure UI updates properly
     });
 }
 
@@ -326,13 +333,92 @@ document.addEventListener('telegramNotification', function(e) {
         // Remove any temporary message that might be a duplicate
         removeTemporaryMessages();
         
-        // Refresh the page to show the new message properly
-        // This ensures server-side rendering handles the message correctly
-        setTimeout(() => {
-            location.reload();
-        }, 500);
+        // Instead of full page reload, just refresh messages container
+        refreshMessagesOnly();
     }
 });
+
+// Efficiently refresh only messages without full page reload
+function refreshMessagesOnly() {
+    const messagesContainer = document.getElementById('messages-container');
+    
+    // Show loading indicator
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'text-center p-2';
+    loadingDiv.innerHTML = '<small class="text-muted"><i class="fas fa-spinner fa-spin"></i> Loading new messages...</small>';
+    messagesContainer.appendChild(loadingDiv);
+    
+    // Fetch only the updated messages
+    fetch(`/api/messages/?chat_id={{ chat.id }}&after=${lastMessageId}`)
+        .then(response => response.json())
+        .then(data => {
+            // Remove loading indicator
+            loadingDiv.remove();
+            
+            // Add new messages to the container
+            if (data.results && data.results.length > 0) {
+                data.results.forEach(message => {
+                    addServerMessageToUI(message);
+                    lastMessageId = Math.max(lastMessageId, message.id);
+                });
+                scrollToBottom();
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing messages:', error);
+            loadingDiv.remove();
+            // Fallback to page reload if API fails
+            setTimeout(() => location.reload(), 1000);
+        });
+}
+
+// Add server-rendered message to UI
+function addServerMessageToUI(message) {
+    const messagesContainer = document.getElementById('messages-container');
+    
+    // Check if message already exists
+    if (document.querySelector(`[data-message-id="${message.id}"]`)) {
+        return;
+    }
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${message.direction}`;
+    messageDiv.setAttribute('data-message-id', message.id);
+    
+    const time = new Date(message.created_at).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+    });
+    
+    messageDiv.innerHTML = `
+        <div class="message-header d-flex justify-content-between align-items-center mb-1">
+            <small class="text-muted">
+                <i class="fas fa-arrow-${message.direction === 'incoming' ? 'down' : 'up'} me-1"></i>
+                ${message.direction === 'incoming' ? `From: ${message.from_id}` : 'Sent'}
+            </small>
+            <small class="text-muted">${time}</small>
+        </div>
+        ${message.text ? `<div class="message-text">${message.text.replace(/\n/g, '<br>')}</div>` : ''}
+        ${message.media_type ? `<div class="message-media">
+            <i class="fas fa-${getMediaIcon(message.media_type)} me-2"></i>
+            <span class="badge bg-secondary">${message.media_type}</span>
+        </div>` : ''}
+    `;
+    
+    messagesContainer.appendChild(messageDiv);
+}
+
+function getMediaIcon(mediaType) {
+    const icons = {
+        'photo': 'image',
+        'video': 'video', 
+        'audio': 'music',
+        'voice': 'microphone',
+        'document': 'file'
+    };
+    return icons[mediaType] || 'paperclip';
+}
 
 // Remove temporary messages (those added by addMessageToUI)
 function removeTemporaryMessages() {

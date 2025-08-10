@@ -256,8 +256,8 @@
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            // Temporarily disable WebSocket for development
-            // connectWebSocket();
+            // Enable WebSocket for real-time notifications
+            connectWebSocket();
             requestNotificationPermission();
         });
     </script>
