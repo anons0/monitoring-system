@@ -191,11 +191,12 @@ class TelethonManager:
             # Save outgoing message to database
             from apps.chats.models import Chat
             from apps.messages.models import Message
+            from apps.notifications.services import NotificationService
             
             try:
                 chat_obj = await Chat.objects.aget(account_id=account_id, chat_id=chat_id)
                 me = await client.get_me()
-                await Message.objects.acreate(
+                saved_message = await Message.objects.acreate(
                     chat=chat_obj,
                     message_id=message.id,
                     from_id=me.id,
@@ -207,6 +208,14 @@ class TelethonManager:
                     }
                 )
                 logger.info(f"✅ Saved outgoing message for account {account_id} via web API")
+                
+                # Send notification for the outgoing message
+                try:
+                    await NotificationService.send_message_notification('new_message', chat_obj, saved_message)
+                    logger.info(f"📡 Sent notification for outgoing account message {saved_message.id}")
+                except Exception as notification_error:
+                    logger.error(f"❌ Failed to send notification for outgoing account message: {notification_error}")
+                    
             except Chat.DoesNotExist:
                 logger.warning(f"Chat {chat_id} not found for account {account_id}")
             except Exception as e:

@@ -231,6 +231,132 @@ def update_commands(request, bot_id):
     return redirect('bots:bot_settings', bot_id=bot_id)
 
 @login_required
+def bulk_update(request):
+    """Bulk update multiple bots"""
+    if request.method == 'POST':
+        try:
+            selected_bot_ids = request.POST.getlist('selected_bots')
+            if not selected_bot_ids:
+                messages.error(request, 'No bots selected for update.')
+                return redirect('core:bots')
+            
+            # Get selected bots
+            bots = Bot.objects.filter(id__in=selected_bot_ids)
+            if not bots.exists():
+                messages.error(request, 'Selected bots not found.')
+                return redirect('core:bots')
+            
+            # Collect update data
+            update_data = {}
+            
+            # Basic information
+            if request.POST.get('first_name'):
+                update_data['first_name'] = request.POST.get('first_name')
+            if request.POST.get('description'):
+                update_data['description'] = request.POST.get('description')
+            if request.POST.get('short_description'):
+                update_data['short_description'] = request.POST.get('short_description')
+            
+            # Menu button
+            if request.POST.get('menu_button_text'):
+                update_data['menu_button_text'] = request.POST.get('menu_button_text')
+            if request.POST.get('menu_button_url'):
+                update_data['menu_button_url'] = request.POST.get('menu_button_url')
+            
+            # Commands
+            command_names = request.POST.getlist('bulk_command_name[]')
+            command_descriptions = request.POST.getlist('bulk_command_description[]')
+            if command_names and command_descriptions:
+                commands = []
+                for name, description in zip(command_names, command_descriptions):
+                    name = name.strip()
+                    description = description.strip()
+                    if name and description:
+                        commands.append({'command': name, 'description': description})
+                if commands:
+                    update_data['commands'] = commands
+            
+            # Profile photo
+            profile_photo = request.FILES.get('profile_photo')
+            
+            # Update options
+            update_on_telegram = request.POST.get('update_on_telegram') == '1'
+            
+            # Apply updates to each bot
+            updated_count = 0
+            failed_count = 0
+            failed_bots = []
+            
+            for bot in bots:
+                try:
+                    # Update basic fields
+                    for field, value in update_data.items():
+                        setattr(bot, field, value)
+                    
+                    # Handle profile photo
+                    if profile_photo:
+                        bot.profile_photo = profile_photo
+                    
+                    # Mark as pending update
+                    bot.profile_update_pending = True
+                    bot.save()
+                    
+                    # Update on Telegram if requested
+                    if update_on_telegram:
+                        try:
+                            from .profile_service import BotProfileService
+                            success = True
+                            
+                            # Update basic info if provided
+                            if any(field in update_data for field in ['first_name', 'description', 'short_description']) or profile_photo:
+                                success &= BotProfileService.update_bot_profile(bot)
+                            
+                            # Update menu button if provided
+                            if any(field in update_data for field in ['menu_button_text', 'menu_button_url']):
+                                success &= BotProfileService.update_bot_menu_button(bot)
+                            
+                            # Update commands if provided
+                            if 'commands' in update_data:
+                                success &= BotProfileService.update_bot_commands(bot)
+                            
+                            if success:
+                                from django.utils import timezone
+                                bot.profile_update_pending = False
+                                bot.profile_last_updated = timezone.now()
+                                bot.save()
+                            else:
+                                failed_bots.append(f"@{bot.username} (Telegram update failed)")
+                                
+                        except Exception as e:
+                            logger.error(f"Error updating bot {bot.id} on Telegram: {e}")
+                            failed_bots.append(f"@{bot.username} ({str(e)})")
+                    
+                    updated_count += 1
+                    
+                except Exception as e:
+                    logger.error(f"Error updating bot {bot.id}: {e}")
+                    failed_count += 1
+                    failed_bots.append(f"@{bot.username} ({str(e)})")
+            
+            # Show results
+            if updated_count > 0:
+                if update_on_telegram and not failed_bots:
+                    messages.success(request, f'Successfully updated {updated_count} bot(s) on Telegram!')
+                elif update_on_telegram and failed_bots:
+                    messages.warning(request, f'Updated {updated_count} bot(s) locally. Some Telegram updates failed: {", ".join(failed_bots)}')
+                else:
+                    messages.success(request, f'Successfully updated {updated_count} bot(s) locally!')
+            
+            if failed_count > 0:
+                messages.error(request, f'Failed to update {failed_count} bot(s): {", ".join(failed_bots)}')
+            
+        except Exception as e:
+            logger.error(f"Error in bulk update: {e}")
+            messages.error(request, f'Error during bulk update: {str(e)}')
+    
+    return redirect('core:bots')
+
+@login_required
 def delete_bot(request, bot_id):
     """Delete a bot"""
     if request.method == 'POST':

@@ -11,6 +11,7 @@ app_name = 'bots'
 urlpatterns = [
     path('', include(router.urls)),
     path('add/', views.add_bot, name='add_bot'),
+    path('bulk-update/', views.bulk_update, name='bulk_update'),
     path('<int:bot_id>/test/', views.test_bot, name='test_bot'),
     path('<int:bot_id>/settings/', views.bot_settings, name='bot_settings'),
     path('<int:bot_id>/update-basic-info/', views.update_basic_info, name='update_basic_info'),

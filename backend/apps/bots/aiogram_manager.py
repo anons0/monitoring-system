@@ -191,6 +191,7 @@ class AiogramManager:
             from apps.chats.models import Chat
             from apps.messages.models import Message
             from apps.bots.models import Bot as BotModel
+            from apps.notifications.services import NotificationService
             from asgiref.sync import sync_to_async
             
             try:
@@ -228,6 +229,13 @@ class AiogramManager:
                 
                 saved_message = await sync_to_async(create_message)()
                 logger.info(f"✅ Sent message via bot {bot_id} to chat {chat_id}, saved outgoing message with ID {saved_message.id}")
+                
+                # Send notification for the outgoing message
+                try:
+                    await NotificationService.send_message_notification('new_message', chat_obj, saved_message)
+                    logger.info(f"📡 Sent notification for outgoing message {saved_message.id}")
+                except Exception as notification_error:
+                    logger.error(f"❌ Failed to send notification for outgoing message: {notification_error}")
                 
             except BotModel.DoesNotExist:
                 logger.error(f"❌ Bot {bot_id} not found in database when saving outgoing message")

@@ -13,10 +13,18 @@
                     <i class="fas fa-robot me-2 text-primary"></i>
                     Registered Bots
                 </h5>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBotModal">
-                    <i class="fas fa-plus me-2"></i>
-                    Add New Bot
-                </button>
+                <div class="btn-group">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBotModal">
+                        <i class="fas fa-plus me-2"></i>
+                        Add New Bot
+                    </button>
+                    {% if bots %}
+                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
+                        <i class="fas fa-edit me-2"></i>
+                        Bulk Update Settings
+                    </button>
+                    {% endif %}
+                </div>
             </div>
             <div class="card-body">
                 {% if bots %}
@@ -173,6 +181,186 @@
     </div>
 </div>
 
+<!-- Bulk Update Modal -->
+<div class="modal fade" id="bulkUpdateModal" tabindex="-1" aria-labelledby="bulkUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="bulkUpdateForm" method="post" action="{% url 'bots:bulk_update' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bulkUpdateModalLabel">
+                        <i class="fas fa-edit me-2 text-primary"></i>
+                        Bulk Update Bot Settings
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Bulk Update:</strong> Apply the same settings to multiple bots at once. 
+                        Only filled fields will be updated. Leave fields empty to keep existing values.
+                    </div>
+                    
+                    <!-- Bot Selection -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <strong>Select Bots to Update:</strong>
+                        </label>
+                        <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="selectAllBots" onchange="toggleAllBots()">
+                                <label class="form-check-label fw-bold" for="selectAllBots">
+                                    Select All Bots
+                                </label>
+                            </div>
+                            <hr>
+                            {% for bot in bots %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input bot-checkbox" type="checkbox" 
+                                       name="selected_bots" value="{{ bot.id }}" id="bot_{{ bot.id }}">
+                                <label class="form-check-label" for="bot_{{ bot.id }}">
+                                    <i class="fas fa-robot me-1"></i>
+                                    @{{ bot.username }}
+                                    <small class="text-muted">(ID: {{ bot.bot_id }})</small>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Basic Information -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-user me-2"></i>
+                                Basic Information
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="bulk_first_name" class="form-label">Display Name</label>
+                                        <input type="text" class="form-control" id="bulk_first_name" 
+                                               name="first_name" placeholder="Leave empty to keep existing">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="bulk_short_description" class="form-label">Short Description</label>
+                                        <input type="text" class="form-control" id="bulk_short_description" 
+                                               name="short_description" maxlength="120" 
+                                               placeholder="Leave empty to keep existing">
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="bulk_profile_photo" class="form-label">Profile Photo</label>
+                                        <input type="file" class="form-control" id="bulk_profile_photo" 
+                                               name="profile_photo" accept="image/*">
+                                        <div class="form-text">
+                                            Upload a photo to apply to all selected bots
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="bulk_description" class="form-label">Description</label>
+                                <textarea class="form-control" id="bulk_description" name="description" 
+                                          rows="3" maxlength="512" placeholder="Leave empty to keep existing"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Menu Button -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-bars me-2"></i>
+                                Menu Button
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="bulk_menu_button_text" class="form-label">Menu Button Text</label>
+                                        <input type="text" class="form-control" id="bulk_menu_button_text" 
+                                               name="menu_button_text" maxlength="64" 
+                                               placeholder="Leave empty to keep existing">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="bulk_menu_button_url" class="form-label">Menu Button URL</label>
+                                        <input type="url" class="form-control" id="bulk_menu_button_url" 
+                                               name="menu_button_url" placeholder="Leave empty to keep existing">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Commands -->
+                    <div class="card mb-3">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="fas fa-terminal me-2"></i>
+                                Bot Commands
+                            </h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addBulkCommand()">
+                                <i class="fas fa-plus me-1"></i>
+                                Add Command
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Note:</strong> Adding commands here will REPLACE all existing commands on selected bots. 
+                                Leave this section empty to keep existing commands unchanged.
+                            </div>
+                            <div id="bulkCommandsContainer">
+                                <!-- Commands will be added here dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Update Options -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-cog me-2"></i>
+                                Update Options
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="update_on_telegram" 
+                                       name="update_on_telegram" value="1" checked>
+                                <label class="form-check-label" for="update_on_telegram">
+                                    <strong>Update on Telegram</strong>
+                                    <div class="form-text">
+                                        Apply changes to actual Telegram bots (recommended). 
+                                        Uncheck to only save changes locally.
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="bulkUpdateBtn">
+                        <i class="fas fa-save me-2"></i>
+                        Update Selected Bots
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Add Bot Modal -->
 <div class="modal fade" id="addBotModal" tabindex="-1" aria-labelledby="addBotModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -241,5 +429,97 @@ function deleteBot(botId) {
         form.submit();
     }
 }
+
+// Bulk update functions
+function toggleAllBots() {
+    const selectAll = document.getElementById('selectAllBots');
+    const botCheckboxes = document.querySelectorAll('.bot-checkbox');
+    
+    botCheckboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+    
+    updateBulkUpdateButton();
+}
+
+function updateBulkUpdateButton() {
+    const selectedBots = document.querySelectorAll('.bot-checkbox:checked');
+    const bulkUpdateBtn = document.getElementById('bulkUpdateBtn');
+    
+    if (selectedBots.length > 0) {
+        bulkUpdateBtn.disabled = false;
+        bulkUpdateBtn.innerHTML = `<i class="fas fa-save me-2"></i>Update ${selectedBots.length} Bot${selectedBots.length > 1 ? 's' : ''}`;
+    } else {
+        bulkUpdateBtn.disabled = true;
+        bulkUpdateBtn.innerHTML = '<i class="fas fa-save me-2"></i>Select Bots to Update';
+    }
+}
+
+function addBulkCommand() {
+    const container = document.getElementById('bulkCommandsContainer');
+    const commandItem = document.createElement('div');
+    commandItem.className = 'bulk-command-item mb-3 p-3 border rounded';
+    commandItem.innerHTML = `
+        <div class="row">
+            <div class="col-md-4">
+                <label class="form-label">Command</label>
+                <input type="text" class="form-control" name="bulk_command_name[]" 
+                       placeholder="start" maxlength="32">
+            </div>
+            <div class="col-md-7">
+                <label class="form-label">Description</label>
+                <input type="text" class="form-control" name="bulk_command_description[]" 
+                       placeholder="Start the bot" maxlength="256">
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeBulkCommand(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    container.appendChild(commandItem);
+}
+
+function removeBulkCommand(button) {
+    const commandItem = button.closest('.bulk-command-item');
+    commandItem.remove();
+}
+
+// Handle bulk update form submission
+document.getElementById('bulkUpdateForm').addEventListener('submit', function(e) {
+    const selectedBots = document.querySelectorAll('.bot-checkbox:checked');
+    
+    if (selectedBots.length === 0) {
+        e.preventDefault();
+        alert('Please select at least one bot to update.');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = document.getElementById('bulkUpdateBtn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Updating...';
+    submitBtn.disabled = true;
+    
+    // If form submission fails, restore button
+    setTimeout(() => {
+        if (submitBtn.disabled) {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    }, 30000); // 30 second timeout
+});
+
+// Add event listeners to bot checkboxes
+document.addEventListener('DOMContentLoaded', function() {
+    const botCheckboxes = document.querySelectorAll('.bot-checkbox');
+    botCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkUpdateButton);
+    });
+    
+    // Initial button state
+    updateBulkUpdateButton();
+});
 </script>
 {% endblock %}
