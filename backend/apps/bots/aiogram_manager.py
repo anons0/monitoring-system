@@ -280,7 +280,15 @@ class AiogramManager:
             )
             
             logger.info(f"🔗 Set webhook for bot {bot_id}: {webhook_url}")
-            return True
+            
+            # Verify webhook was set successfully
+            webhook_info = await bot.get_webhook_info()
+            if webhook_info.url == webhook_url:
+                logger.info(f"✅ Webhook verified for bot {bot_id}")
+                return True
+            else:
+                logger.error(f"❌ Webhook verification failed for bot {bot_id}. Expected: {webhook_url}, Got: {webhook_info.url}")
+                return False
             
         except Exception as e:
             logger.error(f"❌ Error setting up webhook for bot {bot_id}: {e}")

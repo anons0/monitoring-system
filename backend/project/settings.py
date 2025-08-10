@@ -172,7 +172,14 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # Webhook configuration
-WEBHOOK_BASE_URL = get_env_variable('WEBHOOK_BASE_URL', 'https://your-domain.com')
+# Try to auto-detect Railway domain or use environment variable
+RAILWAY_DOMAIN = get_env_variable('RAILWAY_PUBLIC_DOMAIN')
+if RAILWAY_DOMAIN:
+    DEFAULT_WEBHOOK_URL = f'https://{RAILWAY_DOMAIN}'
+else:
+    DEFAULT_WEBHOOK_URL = 'https://monitoring-system-production.up.railway.app'  # Your actual Railway domain
+
+WEBHOOK_BASE_URL = get_env_variable('WEBHOOK_BASE_URL', DEFAULT_WEBHOOK_URL)
 
 # Authentication settings
 LOGIN_URL = '/login/'

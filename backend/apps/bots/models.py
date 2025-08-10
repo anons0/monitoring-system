@@ -22,20 +22,10 @@ class Bot(BaseModel):
     short_description = models.CharField(max_length=120, blank=True, help_text="Short description for bot (up to 120 characters)")
     profile_photo = models.ImageField(upload_to='bot_profiles/', blank=True, null=True, help_text="Bot profile photo")
     profile_photo_url = models.URLField(blank=True, help_text="Current profile photo URL from Telegram")
-    description_photo = models.ImageField(upload_to='bot_descriptions/', blank=True, null=True, help_text="Bot description photo")
-    
     # Bot commands and menu
     commands = models.JSONField(default=list, blank=True, help_text="Bot commands list")
     menu_button_text = models.CharField(max_length=64, blank=True, help_text="Menu button text")
     menu_button_url = models.URLField(blank=True, help_text="Menu button URL")
-    
-    # Auto-reply functionality
-    auto_reply_enabled = models.BooleanField(default=True, help_text="Whether to send auto-reply to user messages")
-    auto_reply_message = models.TextField(
-        default='📦 Ботдан фойдаланиш тартиби\nУшбу бот фақат рўйхатдан ўтган фойдаланувчилар учун юк маълумотларини олишга мўлжалланган.\nАгар сиз рўйхатдан ўтмаган бўлсангиз, @jahon_yuklari_admin_4 га мурожаат қилинг.\n\nЮкни олиш ёки етказиш манзилида ҳар қандай ўзгариш бўлса, @jahon_yuklari_admin_4 га тўғридан-тўғри мурожаат қилинг.\n\n🚫 Бу ботга ёзманг!',
-        blank=True,
-        help_text="Auto-reply message to send to users (except for /start command)"
-    )
     
     # Profile update tracking
     profile_last_updated = models.DateTimeField(null=True, blank=True)
