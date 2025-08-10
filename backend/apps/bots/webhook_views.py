@@ -37,9 +37,13 @@ def bot_webhook(request, bot_id: int, secret: str):
             logger.error(f"Invalid JSON in webhook for bot {bot_id}: {e}")
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
         
+        # Log webhook processing
+        logger.info(f"🔔 Processing webhook for bot {bot_id}, update type: {update_data.get('update_id', 'unknown')}")
+        
         # Process update asynchronously
         async_to_sync(AiogramManager.process_webhook)(bot_id, update_data)
         
+        logger.info(f"✅ Webhook processed successfully for bot {bot_id}")
         return JsonResponse({'status': 'ok'})
         
     except Exception as e:

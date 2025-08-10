@@ -385,3 +385,23 @@ def delete_bot(request, bot_id):
     
     return redirect('bots:bot_settings', bot_id=bot_id)
 
+@login_required
+def update_auto_reply(request, bot_id):
+    """Update bot auto-reply settings"""
+    if request.method == 'POST':
+        try:
+            bot = get_object_or_404(Bot, id=bot_id)
+            
+            # Update auto-reply settings
+            bot.auto_reply_enabled = request.POST.get('auto_reply_enabled') == 'on'
+            bot.auto_reply_message = request.POST.get('auto_reply_message', '')
+            
+            bot.save()
+            messages.success(request, 'Auto-reply settings updated successfully!')
+            
+        except Exception as e:
+            logger.error(f"Error updating auto-reply settings: {e}")
+            messages.error(request, f'Error updating auto-reply settings: {str(e)}')
+    
+    return redirect('bots:bot_settings', bot_id=bot_id)
+

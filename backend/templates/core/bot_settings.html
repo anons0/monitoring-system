@@ -222,6 +222,46 @@
             </div>
         </div>
         
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-reply me-2"></i>
+                    Auto-Reply Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'bots:update_auto_reply' bot.id %}">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="auto_reply_enabled" 
+                                   name="auto_reply_enabled" {% if bot.auto_reply_enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="auto_reply_enabled">
+                                Enable Auto-Reply
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            When enabled, the bot will automatically reply to all non-command messages from users.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="auto_reply_message" class="form-label">Auto-Reply Message</label>
+                        <textarea class="form-control" id="auto_reply_message" name="auto_reply_message" 
+                                  rows="8" placeholder="Enter the message to send automatically...">{{ bot.auto_reply_message|default:'' }}</textarea>
+                        <div class="form-text">
+                            This message will be sent to users when they send any message (except commands starting with /).
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>
+                        Save Auto-Reply Settings
+                    </button>
+                </form>
+            </div>
+        </div>
 
     </div>
     
