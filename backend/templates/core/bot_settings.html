@@ -55,39 +55,21 @@
                                 </div>
                             </div>
                             
-                            <div class="mb-3">
-                                <label for="description_photo" class="form-label">Description Photo</label>
-                                <input type="file" class="form-control" id="description_photo" 
-                                       name="description_photo" accept="image/*">
-                                <div class="form-text">
-                                    Additional photo for bot description or promotional content.
-                                </div>
-                            </div>
+
                             
-                            {% if bot.profile_photo or bot.profile_photo_url or bot.description_photo %}
+                            {% if bot.profile_photo or bot.profile_photo_url %}
                             <div class="mb-3">
-                                <label class="form-label">Current Photos</label>
-                                <div class="row">
+                                <label class="form-label">Current Photo</label>
+                                <div>
                                     {% if bot.profile_photo %}
-                                        <div class="col-md-6 mb-2">
-                                            <img src="{{ bot.profile_photo.url }}" alt="Local bot photo" 
-                                                 class="img-thumbnail" style="max-width: 150px;">
-                                            <small class="text-success d-block">📱 Profile photo (web display)</small>
-                                        </div>
+                                        <img src="{{ bot.profile_photo.url }}" alt="Local bot photo" 
+                                             class="img-thumbnail me-2" style="max-width: 150px;">
+                                        <small class="text-success d-block">📱 Local photo (web display)</small>
                                     {% endif %}
                                     {% if bot.profile_photo_url %}
-                                        <div class="col-md-6 mb-2">
-                                            <img src="{{ bot.profile_photo_url }}" alt="Telegram bot photo" 
-                                                 class="img-thumbnail" style="max-width: 150px;">
-                                            <small class="text-info d-block">🔗 Telegram photo (actual bot photo)</small>
-                                        </div>
-                                    {% endif %}
-                                    {% if bot.description_photo %}
-                                        <div class="col-md-6 mb-2">
-                                            <img src="{{ bot.description_photo.url }}" alt="Bot description photo" 
-                                                 class="img-thumbnail" style="max-width: 150px;">
-                                            <small class="text-warning d-block">📖 Description photo</small>
-                                        </div>
+                                        <img src="{{ bot.profile_photo_url }}" alt="Telegram bot photo" 
+                                             class="img-thumbnail me-2" style="max-width: 150px;">
+                                        <small class="text-info d-block">🔗 Telegram photo (actual bot photo)</small>
                                     {% endif %}
                                 </div>
                                 {% if bot.profile_photo and bot.profile_photo_url %}
@@ -240,46 +222,7 @@
             </div>
         </div>
         
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-reply me-2"></i>
-                    Auto-Reply Settings
-                </h5>
-            </div>
-            <div class="card-body">
-                <form method="post" action="{% url 'bots:update_auto_reply' bot.id %}">
-                    {% csrf_token %}
-                    
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="auto_reply_enabled" 
-                                   name="auto_reply_enabled" {% if bot.auto_reply_enabled %}checked{% endif %}>
-                            <label class="form-check-label" for="auto_reply_enabled">
-                                Enable Auto-Reply
-                            </label>
-                        </div>
-                        <div class="form-text">
-                            When enabled, the bot will automatically reply to all non-command messages from users.
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="auto_reply_message" class="form-label">Auto-Reply Message</label>
-                        <textarea class="form-control" id="auto_reply_message" name="auto_reply_message" 
-                                  rows="8" placeholder="Enter the message to send automatically...">{{ bot.auto_reply_message|default:'' }}</textarea>
-                        <div class="form-text">
-                            This message will be sent to users when they send any message (except commands starting with /).
-                        </div>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save me-2"></i>
-                        Save Auto-Reply Settings
-                    </button>
-                </form>
-            </div>
-        </div>
+
     </div>
     
     <div class="col-md-4">
