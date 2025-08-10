@@ -48,16 +48,35 @@
                                 <label for="profile_photo" class="form-label">Profile Photo</label>
                                 <input type="file" class="form-control" id="profile_photo" 
                                        name="profile_photo" accept="image/*">
-                                <div class="form-text">JPG, PNG, or GIF. Max 10MB.</div>
+                                <div class="form-text">
+                                    JPG, PNG, or GIF. Max 10MB. <br>
+                                    <strong>Note:</strong> This stores the photo locally for web display. 
+                                    To change the actual Telegram bot photo, use <a href="https://t.me/BotFather" target="_blank">@BotFather</a>.
+                                </div>
                             </div>
                             
-                            {% if bot.profile_photo_url %}
+                            {% if bot.profile_photo or bot.profile_photo_url %}
                             <div class="mb-3">
                                 <label class="form-label">Current Photo</label>
                                 <div>
-                                    <img src="{{ bot.profile_photo_url }}" alt="Current bot photo" 
-                                         class="img-thumbnail" style="max-width: 150px;">
+                                    {% if bot.profile_photo %}
+                                        <img src="{{ bot.profile_photo.url }}" alt="Local bot photo" 
+                                             class="img-thumbnail me-2" style="max-width: 150px;">
+                                        <small class="text-success d-block">📱 Local photo (web display)</small>
+                                    {% endif %}
+                                    {% if bot.profile_photo_url %}
+                                        <img src="{{ bot.profile_photo_url }}" alt="Telegram bot photo" 
+                                             class="img-thumbnail me-2" style="max-width: 150px;">
+                                        <small class="text-info d-block">🔗 Telegram photo (actual bot photo)</small>
+                                    {% endif %}
                                 </div>
+                                {% if bot.profile_photo and bot.profile_photo_url %}
+                                    <div class="alert alert-info mt-2">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        You have both a local photo and a Telegram photo. The local photo is used in the web interface, 
+                                        while the Telegram photo is what users see when interacting with the bot.
+                                    </div>
+                                {% endif %}
                             </div>
                             {% endif %}
                         </div>

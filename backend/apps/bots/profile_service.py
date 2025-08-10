@@ -44,14 +44,11 @@ class BotProfileService:
                 await aiogram_bot.set_my_short_description(short_description=bot.short_description)
                 logger.info(f"Updated short description for bot {bot.username}")
             
-            # Update bot photo if provided
+            # Note: Telegram Bot API doesn't allow bots to change their own profile photos
+            # Profile photos must be changed manually through @BotFather or Telegram client
             if bot.profile_photo:
-                try:
-                    with open(bot.profile_photo.path, 'rb') as photo:
-                        await aiogram_bot.set_chat_photo(chat_id=bot.bot_id, photo=photo)
-                    logger.info(f"Updated profile photo for bot {bot.username}")
-                except Exception as e:
-                    logger.warning(f"Failed to update profile photo for {bot.username}: {e}")
+                logger.info(f"Profile photo uploaded for bot {bot.username} - stored locally. To update on Telegram, change via @BotFather")
+                # The photo is stored locally and will be displayed in the web interface
             
             # Update bot commands if provided
             if bot.commands:
@@ -245,3 +242,84 @@ class BotProfileService:
         except Exception as e:
             logger.error(f"Error getting bot profile info: {e}")
             return {}
+    
+    @staticmethod
+    def update_bot_menu_button(bot) -> bool:
+        """Update bot menu button on Telegram"""
+        try:
+            return asyncio.run(BotProfileService._update_bot_menu_button_async(bot))
+        except Exception as e:
+            logger.error(f"Error updating menu button for {bot.username}: {e}")
+            return False
+    
+    @staticmethod
+    async def _update_bot_menu_button_async(bot) -> bool:
+        """Async method to update bot menu button"""
+        try:
+            # Get decrypted token
+            token = encryption_service.decrypt(bot.token_enc)
+            aiogram_bot = AiogramBot(token=token)
+            
+            # Update menu button if provided
+            if bot.menu_button_text and bot.menu_button_url:
+                try:
+                    menu_button = MenuButtonWebApp(
+                        text=bot.menu_button_text,
+                        web_app=WebAppInfo(url=bot.menu_button_url)
+                    )
+                    await aiogram_bot.set_chat_menu_button(menu_button=menu_button)
+                    logger.info(f"Updated menu button for bot {bot.username}")
+                except Exception as e:
+                    logger.warning(f"Failed to update menu button for {bot.username}: {e}")
+                    return False
+            
+            # Close bot session
+            await aiogram_bot.session.close()
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating menu button for {bot.username}: {e}")
+            return False
+    
+    @staticmethod
+    def update_bot_commands(bot) -> bool:
+        """Update bot commands on Telegram"""
+        try:
+            return asyncio.run(BotProfileService._update_bot_commands_async(bot))
+        except Exception as e:
+            logger.error(f"Error updating commands for {bot.username}: {e}")
+            return False
+    
+    @staticmethod
+    async def _update_bot_commands_async(bot) -> bool:
+        """Async method to update bot commands"""
+        try:
+            # Get decrypted token
+            token = encryption_service.decrypt(bot.token_enc)
+            aiogram_bot = AiogramBot(token=token)
+            
+            # Update bot commands if provided
+            if bot.commands:
+                try:
+                    commands = []
+                    for cmd in bot.commands:
+                        if isinstance(cmd, dict) and 'command' in cmd and 'description' in cmd:
+                            commands.append(BotCommand(
+                                command=cmd['command'],
+                                description=cmd['description']
+                            ))
+                    
+                    if commands:
+                        await aiogram_bot.set_my_commands(commands)
+                        logger.info(f"Updated commands for bot {bot.username}: {len(commands)} commands")
+                except Exception as e:
+                    logger.warning(f"Failed to update commands for {bot.username}: {e}")
+                    return False
+            
+            # Close bot session
+            await aiogram_bot.session.close()
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating commands for {bot.username}: {e}")
+            return False
