@@ -163,13 +163,18 @@ def edit_message(request, message_id):
             
             if chat.type == 'account_chat':
                 # Edit via Telethon
-                TelethonManager.edit_message(
-                    chat.account.id, 
-                    chat.chat_id, 
-                    message.message_id, 
-                    new_text
-                )
-                return JsonResponse({'success': True})
+                import asyncio
+                try:
+                    asyncio.run(TelethonManager.edit_message(
+                        chat.account.id, 
+                        chat.chat_id, 
+                        message.message_id, 
+                        new_text
+                    ))
+                    return JsonResponse({'success': True})
+                except Exception as e:
+                    logger.error(f"Error editing message via Telethon: {e}")
+                    raise
             else:
                 return JsonResponse({'error': 'Bot messages cannot be edited via API'}, status=400)
                 
@@ -192,12 +197,17 @@ def delete_message(request, message_id):
             
             if chat.type == 'account_chat':
                 # Delete via Telethon
-                TelethonManager.delete_message(
-                    chat.account.id,
-                    chat.chat_id,
-                    message.message_id
-                )
-                return JsonResponse({'success': True})
+                import asyncio
+                try:
+                    asyncio.run(TelethonManager.delete_message(
+                        chat.account.id,
+                        chat.chat_id,
+                        message.message_id
+                    ))
+                    return JsonResponse({'success': True})
+                except Exception as e:
+                    logger.error(f"Error deleting message via Telethon: {e}")
+                    raise
             else:
                 return JsonResponse({'error': 'Bot messages cannot be deleted via API'}, status=400)
                 
