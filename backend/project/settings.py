@@ -164,6 +164,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 FERNET_KEY = get_env_variable('FERNET_KEY', 'temp-key-generate-real-key-for-production')
 CORS_ALLOW_ALL_ORIGINS = True
 
+# CSRF trusted origins for production
+CSRF_TRUSTED_ORIGINS = [
+    'https://monitoring-system-production.up.railway.app',
+    'http://localhost:8000',  # For local development
+    'http://127.0.0.1:8000',  # For local development
+]
+
 # Webhook configuration
 WEBHOOK_BASE_URL = get_env_variable('WEBHOOK_BASE_URL', 'https://your-domain.com')
 

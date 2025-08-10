@@ -123,6 +123,7 @@ backend/
 - **AttributeError: 'bool' object has no attribute 'lower'**: Fixed in `get_env_variable()` function - handles boolean defaults properly
 - **"The executable `cd` could not be found"**: Fixed in `railway.json` - removed unnecessary `cd backend` commands since Dockerfile already sets correct working directory
 - **"invalid int value: '$PORT'"**: Fixed in `railway.json` - use shell expansion `${PORT:-8000}` instead of `$PORT`
+- **CSRF verification failed - Origin checking failed**: Fixed in `settings.py` - added production domain to `CSRF_TRUSTED_ORIGINS`
 - **Missing dependencies**: Run `pip install -r requirements.txt` before deployment
 - **Redis connection**: Ensure REDIS_URL or REDIS_HOST/PORT are correctly configured
 
