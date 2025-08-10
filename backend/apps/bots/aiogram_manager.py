@@ -151,33 +151,70 @@ class AiogramManager:
     async def send_message(cls, bot_id: int, chat_id: int, text: str, **kwargs):
         """Send message via bot"""
         try:
+            # Get bot and dispatcher from memory, or create them on-demand
             bot = cls.get_bot(bot_id)
+            
             if not bot:
-                raise ValueError(f"Bot {bot_id} not found or not running")
+                logger.info(f"Bot {bot_id} not in memory for sending, creating instance on-demand")
+                
+                # Get bot from database and create instances
+                from .models import Bot as BotModel
+                from apps.core.encryption import encryption_service
+                from asgiref.sync import sync_to_async
+                
+                try:
+                    # Use sync_to_async for database operations
+                    bot_obj = await sync_to_async(BotModel.objects.get)(id=bot_id, status='active')
+                    token = await sync_to_async(encryption_service.decrypt)(bot_obj.token_enc)
+                    
+                    # Create bot instance
+                    bot = Bot(token=token)
+                    
+                    # Store in memory for subsequent requests
+                    cls._bots[bot_id] = bot
+                    
+                    logger.info(f"✅ Created bot instance for sending message via bot {bot_id}")
+                    
+                except BotModel.DoesNotExist:
+                    logger.error(f"❌ Bot {bot_id} not found in database or not active")
+                    raise ValueError(f"Bot {bot_id} not found or not active")
+                except Exception as e:
+                    logger.error(f"❌ Failed to create bot instance for bot {bot_id}: {e}")
+                    raise
             
             message = await bot.send_message(chat_id=chat_id, text=text, **kwargs)
             
             # Save outgoing message to database
             from apps.chats.models import Chat
             from apps.messages.models import Message
+            from asgiref.sync import sync_to_async
             
             try:
-                chat_obj = Chat.objects.get(bot_id=bot_id, chat_id=chat_id)
-                Message.objects.create(
-                    chat=chat_obj,
-                    message_id=message.message_id,
-                    from_id=bot.id,
-                    text=text,
-                    direction='outgoing',
-                    payload={'sent_via': 'api'}
-                )
+                # Use sync_to_async for database operations
+                chat_obj = await sync_to_async(Chat.objects.get)(bot_id=bot_id, chat_id=chat_id)
+                
+                def create_message():
+                    return Message.objects.create(
+                        chat=chat_obj,
+                        message_id=message.message_id,
+                        from_id=chat_obj.bot.bot_id,  # Use bot's Telegram ID
+                        text=text,
+                        direction='outgoing',
+                        payload={'sent_via': 'web_api', 'date': message.date.isoformat()}
+                    )
+                
+                saved_message = await sync_to_async(create_message)()
+                logger.info(f"✅ Sent message via bot {bot_id} to chat {chat_id}, saved with ID {saved_message.id}")
+                
             except Chat.DoesNotExist:
                 logger.warning(f"Chat {chat_id} not found for bot {bot_id}")
+            except Exception as e:
+                logger.error(f"Error saving outgoing message: {e}")
             
             return message
             
         except Exception as e:
-            logger.error(f"Error sending message via bot {bot_id}: {e}")
+            logger.error(f"❌ Error sending message via bot {bot_id}: {e}")
             raise
     
     @classmethod

@@ -72,22 +72,34 @@ def send_message(request):
                 return JsonResponse({'error': 'Missing required fields'}, status=400)
             
             if entity_type == 'bot':
-                # Send via bot
-                message = AiogramManager.send_message(entity_id, chat_id, text)
-                return JsonResponse({
-                    'success': True,
-                    'message_id': message.message_id if hasattr(message, 'message_id') else None
-                })
+                # Send via bot using async
+                import asyncio
+                try:
+                    message = asyncio.run(AiogramManager.send_message(entity_id, chat_id, text))
+                    return JsonResponse({
+                        'success': True,
+                        'message_id': message.message_id if hasattr(message, 'message_id') else None
+                    })
+                except Exception as e:
+                    logger.error(f"Error sending bot message: {e}")
+                    return JsonResponse({'error': f'Failed to send bot message: {str(e)}'}, status=500)
+                    
             elif entity_type == 'account':
                 # Send via account
-                message = TelethonManager.send_message(entity_id, chat_id, text)
-                return JsonResponse({
-                    'success': True,
-                    'message_id': message.id if hasattr(message, 'id') else None
-                })
+                try:
+                    message = TelethonManager.send_message(entity_id, chat_id, text)
+                    return JsonResponse({
+                        'success': True,
+                        'message_id': message.id if hasattr(message, 'id') else None
+                    })
+                except Exception as e:
+                    logger.error(f"Error sending account message: {e}")
+                    return JsonResponse({'error': f'Failed to send account message: {str(e)}'}, status=500)
             else:
                 return JsonResponse({'error': 'Invalid entity_type'}, status=400)
                 
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
         except Exception as e:
             logger.error(f"Error sending message: {e}")
             return JsonResponse({'error': str(e)}, status=500)

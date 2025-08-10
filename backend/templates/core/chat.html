@@ -182,9 +182,96 @@ document.getElementById('message-form').addEventListener('submit', function(e) {
 });
 
 function sendMessage(text) {
-    // This would typically send the message via API
-    // For now, we'll just show a placeholder
-    alert('Message sending feature coming soon! This will integrate with the bot/account APIs.');
+    // Get chat and entity information from the page
+    const chatId = {{ chat.chat_id }};
+    const entityType = '{% if chat.type == "bot_chat" %}bot{% else %}account{% endif %}';
+    const entityId = {% if chat.type == 'bot_chat' %}{{ chat.bot.id }}{% else %}{{ chat.account.id }}{% endif %};
+    
+    // Show sending indicator
+    const messageForm = document.getElementById('message-form');
+    const submitButton = messageForm.querySelector('button[type="submit"]');
+    const originalButtonContent = submitButton.innerHTML;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    submitButton.disabled = true;
+    
+    // Send message via API
+    fetch('/api/messages/send/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            chat_id: chatId,
+            text: text,
+            entity_type: entityType,
+            entity_id: entityId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Add message to UI immediately for better UX
+            addMessageToUI(text, 'outgoing');
+            
+            // Scroll to bottom
+            scrollToBottom();
+        } else {
+            alert('Error sending message: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error sending message. Please try again.');
+    })
+    .finally(() => {
+        // Restore button
+        submitButton.innerHTML = originalButtonContent;
+        submitButton.disabled = false;
+    });
+}
+
+function addMessageToUI(text, direction) {
+    const messagesContainer = document.getElementById('messages-container');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${direction}`;
+    
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+    });
+    
+    messageDiv.innerHTML = `
+        <div class="message-header d-flex justify-content-between align-items-center mb-1">
+            <small class="text-muted">
+                <i class="fas fa-arrow-up me-1"></i>
+                Sent
+            </small>
+            <small class="text-muted">
+                ${timeString}
+            </small>
+        </div>
+        <div class="message-text">${text.replace(/\n/g, '<br>')}</div>
+    `;
+    
+    messagesContainer.appendChild(messageDiv);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
 function refreshChat() {
