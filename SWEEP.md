@@ -10,6 +10,12 @@ cd backend && python manage.py runserver
 # Run migrations
 cd backend && python manage.py migrate
 
+# Create migrations (note: app names use 'telegram_' prefix)
+python backend/manage.py makemigrations telegram_bots
+python backend/manage.py makemigrations telegram_accounts
+python backend/manage.py makemigrations telegram_chats
+python backend/manage.py makemigrations telegram_messages
+
 # Create admin user (easier than createsuperuser)
 cd backend && python manage.py create_admin
 

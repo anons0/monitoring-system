@@ -169,3 +169,13 @@ class BotService:
             return True
         except Exception:
             return False
+    
+    @staticmethod
+    def sync_bot_info(bot: Bot) -> bool:
+        """Sync bot information from Telegram API"""
+        try:
+            from .profile_service import BotProfileService
+            return BotProfileService.sync_bot_info(bot)
+        except Exception as e:
+            logger.error(f"Failed to sync bot info for {bot.id}: {e}")
+            return False
