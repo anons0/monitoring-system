@@ -50,10 +50,20 @@
         .chat-item {
             border-left: 4px solid transparent;
             transition: all 0.3s ease;
+            cursor: pointer;
         }
         .chat-item:hover {
             border-left-color: #667eea;
             background-color: #f8f9fa;
+            transform: translateX(4px);
+        }
+        a:has(.chat-item) {
+            cursor: pointer;
+        }
+        a:has(.chat-item):hover .chat-item {
+            border-left-color: #667eea;
+            background-color: #f8f9fa;
+            transform: translateX(4px);
         }
         .unread-badge {
             background: linear-gradient(135deg, #ff6b6b 0%, #ff5722 100%);

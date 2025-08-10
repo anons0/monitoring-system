@@ -129,33 +129,33 @@
             <div class="card-body p-0">
                 {% if bot_chats %}
                     {% for chat in bot_chats %}
-                        <div class="chat-item p-3 border-bottom">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">
-                                        <a href="{% url 'core:chat' chat.id %}" class="text-decoration-none">
+                        <a href="{% url 'core:chat' chat.id %}" class="text-decoration-none text-dark">
+                            <div class="chat-item p-3 border-bottom">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">
                                             {{ chat.title|default:chat.chat_id }}
-                                        </a>
-                                    </h6>
-                                    <div class="d-flex align-items-center text-muted">
-                                        <i class="fas fa-robot me-1"></i>
-                                        <span class="me-3">{{ chat.bot.username }}</span>
-                                        <i class="fas fa-clock me-1"></i>
-                                        <span>{{ chat.updated_at|timesince }} ago</span>
+                                        </h6>
+                                        <div class="d-flex align-items-center text-muted">
+                                            <i class="fas fa-robot me-1"></i>
+                                            <span class="me-3">{{ chat.bot.username }}</span>
+                                            <i class="fas fa-clock me-1"></i>
+                                            <span>{{ chat.updated_at|timesince }} ago</span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        {% if chat.unread_count > 0 %}
+                                            <span class="badge unread-badge rounded-pill me-2">
+                                                {{ chat.unread_count }}
+                                            </span>
+                                        {% endif %}
+                                        <span class="badge bg-light text-dark">
+                                            {{ chat.chat_type|default:"private" }}
+                                        </span>
                                     </div>
                                 </div>
-                                <div class="d-flex align-items-center">
-                                    {% if chat.unread_count > 0 %}
-                                        <span class="badge unread-badge rounded-pill me-2">
-                                            {{ chat.unread_count }}
-                                        </span>
-                                    {% endif %}
-                                    <span class="badge bg-light text-dark">
-                                        {{ chat.chat_type|default:"private" }}
-                                    </span>
-                                </div>
                             </div>
-                        </div>
+                        </a>
                     {% endfor %}
                 {% else %}
                     <div class="text-center p-4">
