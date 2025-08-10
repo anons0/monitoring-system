@@ -114,13 +114,24 @@ def send_message(request):
                     return JsonResponse({'error': f'Failed to send bot message: {str(e)}'}, status=500)
                     
             elif entity_type == 'account':
-                # Send via account
+                # Send via account using async with timeout
+                import asyncio
                 try:
-                    message = TelethonManager.send_message(entity_id, chat_id, text)
+                    # Create async function with timeout
+                    async def send_account_with_timeout():
+                        return await asyncio.wait_for(
+                            TelethonManager.send_message(entity_id, chat_id, text),
+                            timeout=10.0  # 10 second timeout
+                        )
+                    
+                    message = asyncio.run(send_account_with_timeout())
                     return JsonResponse({
                         'success': True,
                         'message_id': message.id if hasattr(message, 'id') else None
                     })
+                except asyncio.TimeoutError:
+                    logger.error(f"Timeout sending account message to chat {chat_id}")
+                    return JsonResponse({'error': 'Message sending timed out'}, status=504)
                 except Exception as e:
                     logger.error(f"Error sending account message: {e}")
                     return JsonResponse({'error': f'Failed to send account message: {str(e)}'}, status=500)

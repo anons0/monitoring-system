@@ -19,7 +19,7 @@ class EventHandler:
         self.account_id = account_id
     
     async def handle_new_message(self, event):
-        """Handle new message event"""
+        """Handle new incoming message event"""
         try:
             logger.info(f"🔔 INCOMING ACCOUNT MESSAGE!")
             message = event.message
@@ -51,6 +51,39 @@ class EventHandler:
             
         except Exception as e:
             logger.error(f"❌ Error handling new message for account {self.account_id}: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+    
+    async def handle_outgoing_message(self, event):
+        """Handle new outgoing message event"""
+        try:
+            logger.info(f"📤 OUTGOING ACCOUNT MESSAGE!")
+            message = event.message
+            if isinstance(message, MessageService):
+                # Skip service messages for now
+                logger.debug(f"Skipping service message from account {self.account_id}")
+                return
+            
+            logger.info(f"   Account ID: {self.account_id}")
+            logger.info(f"   Message ID: {message.id}")
+            logger.info(f"   Chat: {message.peer_id}")
+            logger.info(f"   Text: {(message.text or '')[:100] if message.text else '[No text]'}")
+            
+            account = await self._get_account()
+            if not account:
+                logger.error(f"Account {self.account_id} not found in database")
+                return
+            
+            # Get chat information
+            chat = await self._get_or_create_chat(account, event.chat, message.peer_id)
+            
+            # Save outgoing message
+            saved_message = await self._save_message(chat, message, 'outgoing')
+            
+            logger.info(f"✅ Successfully saved outgoing account message in chat {chat.title or chat.chat_id}")
+            
+        except Exception as e:
+            logger.error(f"❌ Error handling outgoing message for account {self.account_id}: {e}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
     

@@ -112,7 +112,8 @@ class TelethonManager:
             # Set up event handlers
             handler = EventHandler(account_id)
             
-            client.add_event_handler(handler.handle_new_message, events.NewMessage)
+            client.add_event_handler(handler.handle_new_message, events.NewMessage(incoming=True))
+            client.add_event_handler(handler.handle_outgoing_message, events.NewMessage(outgoing=True))
             client.add_event_handler(handler.handle_message_edited, events.MessageEdited)
             client.add_event_handler(handler.handle_message_deleted, events.MessageDeleted)
             
