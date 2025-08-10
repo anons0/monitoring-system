@@ -193,33 +193,69 @@
     <script>
         // Global WebSocket connection for real-time updates
         let notificationSocket = null;
+        let reconnectAttempts = 0;
+        let maxReconnectAttempts = 5;
+        let reconnectInterval = 3000;
         
         function connectWebSocket() {
+            // Don't create multiple connections
+            if (notificationSocket && (notificationSocket.readyState === WebSocket.CONNECTING || notificationSocket.readyState === WebSocket.OPEN)) {
+                return;
+            }
+            
             const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             const wsUrl = `${protocol}://${window.location.host}/ws/notifications/`;
             
-            notificationSocket = new WebSocket(wsUrl);
-            
-            notificationSocket.onopen = function(e) {
-                console.log('WebSocket connected for notifications');
-            };
-            
-            notificationSocket.onmessage = function(e) {
-                const data = JSON.parse(e.data);
-                if (data.type === 'notification') {
-                    handleNotification(data.data);
-                }
-            };
-            
-            notificationSocket.onclose = function(e) {
-                console.log('WebSocket closed, attempting to reconnect in 3 seconds...');
-                setTimeout(connectWebSocket, 3000);
-            };
-            
-            notificationSocket.onerror = function(e) {
-                console.error('WebSocket error:', e);
-            };
+            try {
+                notificationSocket = new WebSocket(wsUrl);
+                
+                notificationSocket.onopen = function(e) {
+                    console.log('✅ WebSocket connected for notifications');
+                    reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+                };
+                
+                notificationSocket.onmessage = function(e) {
+                    try {
+                        const data = JSON.parse(e.data);
+                        if (data.type === 'notification') {
+                            handleNotification(data.data);
+                        }
+                    } catch (error) {
+                        console.error('Error parsing WebSocket message:', error);
+                    }
+                };
+                
+                notificationSocket.onclose = function(e) {
+                    console.log('🔌 WebSocket disconnected');
+                    
+                    // Only attempt to reconnect if we haven't exceeded max attempts
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        console.log(`🔄 Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts}) in ${reconnectInterval/1000} seconds...`);
+                        setTimeout(connectWebSocket, reconnectInterval);
+                        
+                        // Increase reconnect interval for subsequent attempts
+                        reconnectInterval = Math.min(reconnectInterval * 1.5, 30000);
+                    } else {
+                        console.log('❌ Max reconnection attempts reached. WebSocket disabled.');
+                    }
+                };
+                
+                notificationSocket.onerror = function(e) {
+                    console.error('❌ WebSocket error:', e);
+                };
+                
+            } catch (error) {
+                console.error('❌ Failed to create WebSocket connection:', error);
+            }
         }
+        
+        // Close WebSocket connection when page is about to unload
+        window.addEventListener('beforeunload', function() {
+            if (notificationSocket) {
+                notificationSocket.close();
+            }
+        });
         
         function handleNotification(notification) {
             // Show browser notification if supported
@@ -256,9 +292,11 @@
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            // Enable WebSocket for real-time notifications
-            connectWebSocket();
+            // Temporarily disable WebSocket for better performance
+            // connectWebSocket();
             requestNotificationPermission();
+            
+            console.log('🚀 WebSocket disabled for better navigation performance');
         });
     </script>
     

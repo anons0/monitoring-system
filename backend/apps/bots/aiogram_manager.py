@@ -187,29 +187,51 @@ class AiogramManager:
             # Save outgoing message to database
             from apps.chats.models import Chat
             from apps.messages.models import Message
+            from apps.bots.models import Bot as BotModel
             from asgiref.sync import sync_to_async
             
             try:
-                # Use sync_to_async for database operations
-                chat_obj = await sync_to_async(Chat.objects.get)(bot_id=bot_id, chat_id=chat_id)
+                logger.info(f"🔄 Attempting to save outgoing message for bot {bot_id} to chat {chat_id}")
+                
+                # Get bot object first
+                bot_obj = await sync_to_async(BotModel.objects.get)(id=bot_id)
+                
+                # Try to get existing chat or create it
+                def get_or_create_chat():
+                    chat_obj, created = Chat.objects.get_or_create(
+                        bot=bot_obj,
+                        chat_id=chat_id,
+                        defaults={
+                            'type': 'bot_chat',
+                            'title': f'Chat {chat_id}',
+                            'chat_type': 'private'
+                        }
+                    )
+                    if created:
+                        logger.info(f"📝 Created new chat {chat_id} for bot {bot_id}")
+                    return chat_obj
+                
+                chat_obj = await sync_to_async(get_or_create_chat)()
                 
                 def create_message():
                     return Message.objects.create(
                         chat=chat_obj,
                         message_id=message.message_id,
-                        from_id=chat_obj.bot.bot_id,  # Use bot's Telegram ID
+                        from_id=bot_obj.bot_id,  # Use bot's Telegram ID
                         text=text,
                         direction='outgoing',
                         payload={'sent_via': 'web_api', 'date': message.date.isoformat()}
                     )
                 
                 saved_message = await sync_to_async(create_message)()
-                logger.info(f"✅ Sent message via bot {bot_id} to chat {chat_id}, saved with ID {saved_message.id}")
+                logger.info(f"✅ Sent message via bot {bot_id} to chat {chat_id}, saved outgoing message with ID {saved_message.id}")
                 
-            except Chat.DoesNotExist:
-                logger.warning(f"Chat {chat_id} not found for bot {bot_id}")
+            except BotModel.DoesNotExist:
+                logger.error(f"❌ Bot {bot_id} not found in database when saving outgoing message")
             except Exception as e:
-                logger.error(f"Error saving outgoing message: {e}")
+                logger.error(f"❌ Error saving outgoing message for bot {bot_id} to chat {chat_id}: {e}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
             
             return message
             

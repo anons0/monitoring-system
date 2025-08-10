@@ -36,6 +36,14 @@ class MessageViewSet(viewsets.ModelViewSet):
         if chat_id:
             queryset = queryset.filter(chat_id=chat_id)
         
+        # Filter messages after a certain ID (for incremental loading)
+        after = self.request.query_params.get('after')
+        if after:
+            try:
+                queryset = queryset.filter(id__gt=int(after))
+            except (ValueError, TypeError):
+                pass
+        
         # Filter by read status
         unread_only = self.request.query_params.get('unread_only')
         if unread_only == 'true':
@@ -45,6 +53,17 @@ class MessageViewSet(viewsets.ModelViewSet):
         search = self.request.query_params.get('search')
         if search:
             queryset = queryset.filter(text__icontains=search)
+        
+        # Optimize with select_related
+        queryset = queryset.select_related('chat', 'chat__bot', 'chat__account')
+        
+        # Limit results for performance
+        limit = self.request.query_params.get('limit', '50')
+        try:
+            limit = min(int(limit), 100)  # Max 100 messages
+            queryset = queryset[:limit]
+        except (ValueError, TypeError):
+            queryset = queryset[:50]  # Default 50 messages
         
         return queryset
     
@@ -72,14 +91,24 @@ def send_message(request):
                 return JsonResponse({'error': 'Missing required fields'}, status=400)
             
             if entity_type == 'bot':
-                # Send via bot using async
+                # Send via bot using async with timeout
                 import asyncio
                 try:
-                    message = asyncio.run(AiogramManager.send_message(entity_id, chat_id, text))
+                    # Create async function with timeout
+                    async def send_with_timeout():
+                        return await asyncio.wait_for(
+                            AiogramManager.send_message(entity_id, chat_id, text),
+                            timeout=10.0  # 10 second timeout
+                        )
+                    
+                    message = asyncio.run(send_with_timeout())
                     return JsonResponse({
                         'success': True,
                         'message_id': message.message_id if hasattr(message, 'message_id') else None
                     })
+                except asyncio.TimeoutError:
+                    logger.error(f"Timeout sending bot message to chat {chat_id}")
+                    return JsonResponse({'error': 'Message sending timed out'}, status=504)
                 except Exception as e:
                     logger.error(f"Error sending bot message: {e}")
                     return JsonResponse({'error': f'Failed to send bot message: {str(e)}'}, status=500)
