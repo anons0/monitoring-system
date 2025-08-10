@@ -96,12 +96,45 @@ class AiogramManager:
     async def process_webhook(cls, bot_id: int, update_data: dict):
         """Process webhook update"""
         try:
+            # Get bot and dispatcher from memory, or create them on-demand
             bot = cls.get_bot(bot_id)
             dp = cls.get_dispatcher(bot_id)
             
             if not bot or not dp:
-                logger.error(f"Bot {bot_id} not found or not running")
-                return
+                logger.info(f"Bot {bot_id} not in memory, creating instances on-demand")
+                
+                # Get bot from database and create instances
+                from .models import Bot as BotModel
+                from apps.core.encryption import encryption_service
+                from asgiref.sync import sync_to_async
+                
+                try:
+                    # Use sync_to_async for database operations
+                    bot_obj = await sync_to_async(BotModel.objects.get)(id=bot_id, status='active')
+                    token = await sync_to_async(encryption_service.decrypt)(bot_obj.token_enc)
+                    
+                    # Create bot and dispatcher instances
+                    bot = Bot(token=token)
+                    dp = Dispatcher()
+                    handler = MessageHandler(bot_id)
+                    
+                    # Register handlers
+                    dp.message.register(handler.handle_message)
+                    dp.edited_message.register(handler.handle_edited_message)
+                    
+                    # Store in memory for subsequent requests
+                    cls._bots[bot_id] = bot
+                    cls._dispatchers[bot_id] = dp
+                    cls._handlers[bot_id] = handler
+                    
+                    logger.info(f"✅ Created bot instances for bot {bot_id}")
+                    
+                except BotModel.DoesNotExist:
+                    logger.error(f"❌ Bot {bot_id} not found in database or not active")
+                    return
+                except Exception as e:
+                    logger.error(f"❌ Failed to create bot instances for bot {bot_id}: {e}")
+                    return
             
             # Create update object
             update = Update(**update_data)
@@ -110,7 +143,9 @@ class AiogramManager:
             await dp.feed_update(bot, update)
             
         except Exception as e:
-            logger.error(f"Error processing webhook for bot {bot_id}: {e}")
+            logger.error(f"❌ Error processing webhook for bot {bot_id}: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
     
     @classmethod
     async def send_message(cls, bot_id: int, chat_id: int, text: str, **kwargs):

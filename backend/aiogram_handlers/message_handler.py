@@ -40,19 +40,22 @@ class MessageHandler:
             # Import Django models here to avoid circular imports
             from django.db import transaction
             
+            # Import sync_to_async for database operations
+            from asgiref.sync import sync_to_async
+            
             # Get or create bot
-            bot = self._get_bot_sync()
+            bot = await sync_to_async(self._get_bot_sync)()
             if not bot:
                 return
             
             # Get or create chat
-            chat = self._get_or_create_chat_sync(bot, message.chat)
+            chat = await sync_to_async(self._get_or_create_chat_sync)(bot, message.chat)
             
             # Get or create user
-            user = self._get_or_create_user_sync(message.from_user)
+            user = await sync_to_async(self._get_or_create_user_sync)(message.from_user)
             
             # Save message
-            saved_message = self._save_message_sync(chat, message, 'incoming')
+            saved_message = await sync_to_async(self._save_message_sync)(chat, message, 'incoming')
             
             logger.info(f"✅ Successfully saved message from {user.username or user.first_name} in chat {chat.title or chat.chat_id}")
             logger.info(f"📝 Message saved with ID: {saved_message.id}")
