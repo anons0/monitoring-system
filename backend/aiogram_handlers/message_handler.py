@@ -251,7 +251,7 @@ class MessageHandler:
             payload={
                 'message_type': tg_message.content_type,
                 'date': tg_message.date.isoformat(),
-                'entities': [entity.to_python() for entity in (tg_message.entities or [])],
+                'entities': [entity.model_dump() for entity in (tg_message.entities or [])],
             }
         )
         
@@ -299,7 +299,7 @@ class MessageHandler:
             payload={
                 'message_type': tg_message.content_type,
                 'date': tg_message.date.isoformat(),
-                'entities': [entity.to_python() for entity in (tg_message.entities or [])],
+                'entities': [entity.model_dump() for entity in (tg_message.entities or [])],
             }
         )
         
