@@ -90,12 +90,18 @@ def chat_view(request, chat_id):
         chat = Chat.objects.select_related('bot', 'account').get(id=chat_id)
         messages = Message.objects.filter(chat=chat).order_by('created_at')
         
+        # Calculate message statistics
+        incoming_count = messages.filter(direction='incoming').count()
+        outgoing_count = messages.filter(direction='outgoing').count()
+        
         # Mark messages as read
         Message.objects.filter(chat=chat, read=False).update(read=True)
         
         context = {
             'chat': chat,
             'messages': messages,
+            'incoming_count': incoming_count,
+            'outgoing_count': outgoing_count,
         }
         
         return render(request, 'core/chat.html', context)
