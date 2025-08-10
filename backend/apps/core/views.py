@@ -52,6 +52,14 @@ def bots_view(request):
     """Bots management view"""
     bots = Bot.objects.all().order_by('-created_at')
     
+    # Get bot statistics
+    bot_stats = {
+        'total': bots.count(),
+        'active': bots.filter(status='active').count(),
+        'inactive': bots.filter(status='inactive').count(),
+        'error': bots.filter(status='error').count(),
+    }
+    
     # Get bot chats with unread count
     bot_chats = Chat.objects.filter(type='bot_chat').select_related('bot').annotate(
         unread_count=Count('messages', filter=Q(messages__read=False))
@@ -59,6 +67,7 @@ def bots_view(request):
     
     context = {
         'bots': bots,
+        'bot_stats': bot_stats,
         'bot_chats': bot_chats,
     }
     

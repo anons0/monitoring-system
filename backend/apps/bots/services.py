@@ -56,8 +56,12 @@ class BotService:
                 bot_id=bot_info['id'],
                 username=bot_info['username'],
                 token_enc=encrypted_token,
-                status='inactive'
+                status='active'  # Auto-activate new bots
             )
+            
+            # Auto-start bot with webhook after creation
+            logger.info(f"Auto-starting bot @{bot.username}")
+            BotService.start_bot(bot)
             
             logger.info(f"Added bot @{bot.username} (ID: {bot.bot_id})")
             return bot

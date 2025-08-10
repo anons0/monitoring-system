@@ -80,6 +80,28 @@
                                     <div class="message-text">{{ message.text|linebreaks }}</div>
                                 {% endif %}
                                 
+                                <!-- Message Actions -->
+                                {% if message.direction == 'outgoing' %}
+                                    <div class="message-actions mt-2" style="display: none;">
+                                        <div class="btn-group btn-group-sm">
+                                            {% if chat.type == 'account_chat' %}
+                                                <button class="btn btn-outline-light btn-sm" 
+                                                        onclick="editMessage({{ message.id }}, '{{ message.text|escapejs }}')"
+                                                        title="Edit Message">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-outline-danger btn-sm" 
+                                                        onclick="deleteMessage({{ message.id }})"
+                                                        title="Delete Message">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            {% else %}
+                                                <small class="text-muted">Bot messages cannot be edited</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                
                                 {% if message.media_type %}
                                     <div class="message-media">
                                         <i class="fas fa-{% if message.media_type == 'photo' %}image{% elif message.media_type == 'video' %}video{% elif message.media_type == 'audio' %}music{% elif message.media_type == 'voice' %}microphone{% elif message.media_type == 'document' %}file{% else %}paperclip{% endif %} me-2"></i>
@@ -428,6 +450,66 @@ function removeTemporaryMessages() {
 
 // Clean up temporary messages after a delay (fallback)
 setTimeout(removeTemporaryMessages, 10000); // Remove after 10 seconds
+
+// Message edit/delete functions
+function editMessage(messageId, currentText) {
+    const newText = prompt('Edit message:', currentText);
+    if (newText && newText.trim() && newText !== currentText) {
+        fetch(`/api/messages/${messageId}/edit/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ text: newText.trim() })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update message text in UI
+                const messageElement = document.querySelector(`[data-message-id="${messageId}"] .message-text`);
+                if (messageElement) {
+                    messageElement.innerHTML = newText.replace(/\n/g, '<br>');
+                }
+            } else {
+                alert('Error editing message: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error editing message. Please try again.');
+        });
+    }
+}
+
+function deleteMessage(messageId) {
+    if (confirm('Are you sure you want to delete this message?')) {
+        fetch(`/api/messages/${messageId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove message from UI
+                const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+                if (messageElement) {
+                    messageElement.style.opacity = '0.5';
+                    messageElement.innerHTML = '<div class="text-muted"><i>Message deleted</i></div>';
+                    setTimeout(() => messageElement.remove(), 2000);
+                }
+            } else {
+                alert('Error deleting message: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting message. Please try again.');
+        });
+    }
+}
 </script>
 
 <style>
@@ -470,6 +552,20 @@ setTimeout(removeTemporaryMessages, 10000); // Remove after 10 seconds
 .message.incoming .message-reply,
 .message.incoming .message-forward {
     border-left-color: rgba(0,0,0,0.3);
+}
+
+/* Message actions - show on hover */
+.message:hover .message-actions {
+    display: block !important;
+}
+
+.message-actions .btn {
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.message-actions .btn:hover {
+    opacity: 1;
 }
 
 @keyframes fadeIn {
