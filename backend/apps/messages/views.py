@@ -110,7 +110,7 @@ def send_message(request):
                             
                             return await asyncio.wait_for(
                                 AiogramManager.send_message(entity_id, chat_id, text),
-                                timeout=15.0  # Increased timeout to 15 seconds
+                                timeout=30.0  # Increased timeout to 30 seconds for bot creation
                             )
                         except BotModel.DoesNotExist:
                             logger.error(f"Bot {entity_id} not found or not active")
@@ -145,7 +145,7 @@ def send_message(request):
                             
                             return await asyncio.wait_for(
                                 TelethonManager.send_message(entity_id, chat_id, text),
-                                timeout=15.0  # Increased timeout to 15 seconds
+                                timeout=30.0  # Increased timeout to 30 seconds for account creation
                             )
                         except AccountModel.DoesNotExist:
                             logger.error(f"Account {entity_id} not found or not active")

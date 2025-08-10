@@ -49,6 +49,7 @@ class AiogramManager:
             
             if success:
                 logger.info(f"Started bot {bot_id} with webhook")
+                logger.info(f"Bot {bot_id} stored in memory. Total active bots: {len(cls._bots)}")
                 return True
             else:
                 # Clean up if webhook setup failed

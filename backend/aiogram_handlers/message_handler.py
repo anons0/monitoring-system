@@ -63,7 +63,13 @@ class MessageHandler:
             # Handle auto-reply for non-command messages
             await self._handle_auto_reply(bot, message, chat)
             
-
+            # Send notification
+            try:
+                from apps.notifications.services import NotificationService
+                await NotificationService.send_message_notification('new_message', chat, saved_message)
+                logger.info(f"📡 Sent notification for incoming message {saved_message.id}")
+            except Exception as notification_error:
+                logger.error(f"❌ Failed to send notification for incoming message: {notification_error}")
             
         except Exception as e:
             logger.error(f"❌ Error handling message: {e}")
