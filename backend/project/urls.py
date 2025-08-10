@@ -4,7 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # path('admin/', admin.site.urls),  # Admin disabled for security
     path('api/bots/', include('apps.bots.urls')),
     path('api/accounts/', include('apps.accounts.urls')),
     path('api/messages/', include('apps.messages.urls')),

@@ -118,17 +118,23 @@
                                 {% endif %}
                             </a>
                         </li>
+                        {% if user.is_superuser %}
                         <li class="nav-item mt-4">
-                            <a class="nav-link" href="{% url 'admin:index' %}">
-                                <i class="fas fa-cog me-2"></i>
-                                Admin Panel
+                            <small class="text-white-50 px-3">ADMIN</small>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}" 
+                               href="{% url 'core:user_management' %}">
+                                <i class="fas fa-users-cog me-2"></i>
+                                Manage Users
                             </a>
                         </li>
+                        {% endif %}
                     </ul>
                     
                     <div class="mt-auto pt-4">
                         <div class="nav-item">
-                            <a class="nav-link" href="{% url 'admin:logout' %}">
+                            <a class="nav-link" href="{% url 'core:logout' %}">
                                 <i class="fas fa-sign-out-alt me-2"></i>
                                 Logout
                             </a>

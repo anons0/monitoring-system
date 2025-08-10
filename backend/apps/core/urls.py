@@ -10,6 +10,12 @@ urlpatterns = [
     path('accounts/', views.accounts_view, name='accounts'),
     path('chat/<int:chat_id>/', views.chat_view, name='chat'),
     path('login/', views.CustomLoginView.as_view(), name='login'),
+    path('logout/', views.CustomLogoutView.as_view(), name='logout'),
+    
+    # User management URLs (admin only)
+    path('users/', views.user_management_view, name='user_management'),
+    path('users/add/', views.add_user_view, name='add_user'),
+    path('users/<int:user_id>/delete/', views.delete_user_view, name='delete_user'),
     
     # Bot management URLs
     path('bots/add/', views.add_bot_view, name='add_bot'),

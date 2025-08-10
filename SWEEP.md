@@ -10,7 +10,10 @@ cd backend && python manage.py runserver
 # Run migrations
 cd backend && python manage.py migrate
 
-# Create superuser
+# Create admin user (easier than createsuperuser)
+cd backend && python manage.py create_admin
+
+# Create superuser (interactive)
 cd backend && python manage.py createsuperuser
 
 # Generate Fernet key

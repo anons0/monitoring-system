@@ -168,9 +168,9 @@ CORS_ALLOW_ALL_ORIGINS = True
 WEBHOOK_BASE_URL = get_env_variable('WEBHOOK_BASE_URL', 'https://your-domain.com')
 
 # Authentication settings
-LOGIN_URL = '/admin/login/'
-LOGIN_REDIRECT_URL = '/admin/'
-LOGOUT_REDIRECT_URL = '/admin/login/'
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'
+LOGOUT_REDIRECT_URL = '/login/'
 
 # REST Framework
 REST_FRAMEWORK = {

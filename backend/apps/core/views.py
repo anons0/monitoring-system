@@ -1,8 +1,10 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import views as auth_views
+from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Count, Q
+from django.core.exceptions import PermissionDenied
 from apps.bots.models import Bot
 from apps.accounts.models import Account
 from apps.chats.models import Chat
@@ -195,3 +197,81 @@ class CustomLoginView(auth_views.LoginView):
     
     def get_success_url(self):
         return '/dashboard/'
+
+
+class CustomLogoutView(auth_views.LogoutView):
+    """Custom logout view"""
+    next_page = '/login/'
+
+
+def is_admin(user):
+    """Check if user is admin (superuser)"""
+    return user.is_authenticated and user.is_superuser
+
+
+@user_passes_test(is_admin)
+def user_management_view(request):
+    """User management view - only for admins"""
+    users = User.objects.all().order_by('-date_joined')
+    context = {
+        'users': users,
+    }
+    return render(request, 'core/users.html', context)
+
+
+@user_passes_test(is_admin)
+def add_user_view(request):
+    """Add a new user - only for admins"""
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '').strip()
+        email = request.POST.get('email', '').strip()
+        is_admin = request.POST.get('is_admin') == 'on'
+        
+        if not username or not password:
+            messages.error(request, 'Username and password are required.')
+            return redirect('core:user_management')
+        
+        try:
+            # Check if username already exists
+            if User.objects.filter(username=username).exists():
+                messages.error(request, 'Username already exists.')
+                return redirect('core:user_management')
+            
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                email=email,
+                is_staff=is_admin,
+                is_superuser=is_admin
+            )
+            
+            messages.success(request, f'User "{username}" created successfully!')
+            
+        except Exception as e:
+            messages.error(request, f'Error creating user: {str(e)}')
+    
+    return redirect('core:user_management')
+
+
+@user_passes_test(is_admin)
+def delete_user_view(request, user_id):
+    """Delete a user - only for admins"""
+    if request.method == 'POST':
+        try:
+            user = get_object_or_404(User, id=user_id)
+            
+            # Prevent deleting the current admin
+            if user == request.user:
+                messages.error(request, 'You cannot delete your own account.')
+                return redirect('core:user_management')
+            
+            username = user.username
+            user.delete()
+            messages.success(request, f'User "{username}" deleted successfully!')
+            
+        except Exception as e:
+            messages.error(request, f'Error deleting user: {str(e)}')
+    
+    return redirect('core:user_management')
