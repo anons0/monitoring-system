@@ -21,27 +21,18 @@ def dashboard(request):
         'inactive': Bot.objects.filter(status='inactive').count(),
     }
     
-    account_stats = {
-        'total': Account.objects.count(),
-        'active': Account.objects.filter(status='active').count(),
-        'inactive': Account.objects.filter(status='inactive').count(),
-    }
+    # Get recent bots for bot management section
+    bots = Bot.objects.all().order_by('-created_at')[:5]
     
     # Get recent bot chats with unread count, sorted by last message time
     bot_chats = Chat.objects.filter(type='bot_chat').select_related('bot').annotate(
         unread_count=Count('messages', filter=Q(messages__read=False))
     ).order_by('-last_message_at', '-updated_at')[:10]
     
-    # Get recent account chats with unread count, sorted by last message time
-    account_chats = Chat.objects.filter(type='account_chat').select_related('account').annotate(
-        unread_count=Count('messages', filter=Q(messages__read=False))
-    ).order_by('-last_message_at', '-updated_at')[:10]
-    
     context = {
         'bot_stats': bot_stats,
-        'account_stats': account_stats,
+        'bots': bots,
         'bot_chats': bot_chats,
-        'account_chats': account_chats,
     }
     
     return render(request, 'core/dashboard.html', context)

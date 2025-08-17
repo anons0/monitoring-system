@@ -4,7 +4,7 @@
 
 {% block page_title %}
     <div class="d-flex align-items-center">
-        <a href="{% if chat.type == 'bot_chat' %}{% url 'core:bots' %}{% else %}{% url 'core:accounts' %}{% endif %}" 
+        <a href="{% url 'core:chats' %}" 
            class="btn btn-outline-secondary me-3 d-flex align-items-center justify-content-center"
            style="width: 40px; height: 40px; border-radius: 50%;">
             <i class="fas fa-arrow-left"></i>
@@ -12,11 +12,7 @@
         <div>
             <div class="chat-title mb-1">{{ chat.title|default:chat.chat_id }}</div>
             <div class="chat-meta">
-                {% if chat.type == 'bot_chat' %}
-                    <i class="fas fa-robot me-1"></i>{{ chat.bot.username }}
-                {% else %}
-                    <i class="fas fa-user me-1"></i>{{ chat.account.phone_number }}
-                {% endif %}
+                <i class="fas fa-robot me-1"></i>{{ chat.bot.username }}
                 <span class="mx-2">•</span>
                 <span>{{ chat.chat_type|default:"private"|title }} Chat</span>
             </div>
@@ -44,7 +40,7 @@
     border-bottom: 2px solid var(--border-color);
     padding: 1.25rem 1.5rem;
     display: flex;
-    justify-content: between;
+    justify-content: space-between;
     align-items: center;
     flex-shrink: 0;
 }
@@ -113,6 +109,25 @@
     align-self: flex-end;
     border-bottom-right-radius: var(--radius-sm);
     box-shadow: var(--shadow-md);
+}
+
+.message.temporary-message {
+    opacity: 0.7;
+    position: relative;
+}
+
+.message.temporary-message::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: rgba(255, 255, 255, 0.8);
+    animation: spin 1s ease-in-out infinite;
 }
 
 .message-header {
@@ -328,6 +343,10 @@
     }
 }
 
+@keyframes spin {
+    to { transform: translateY(-50%) rotate(360deg); }
+}
+
 /* Custom scrollbar for messages */
 .messages-area::-webkit-scrollbar {
     width: 8px;
@@ -356,11 +375,7 @@
                 <div class="flex-grow-1">
                     <h6 class="chat-title-header">{{ chat.title|default:chat.chat_id }}</h6>
                     <div class="chat-subtitle">
-                        {% if chat.type == 'bot_chat' %}
-                            Bot Chat via @{{ chat.bot.username }}
-                        {% else %}
-                            Account Chat via {{ chat.account.phone_number }}
-                        {% endif %}
+                        Bot Chat via @{{ chat.bot.username }}
                         | {{ chat.chat_type|default:"private"|title }}
                         {% if messages %}
                             | {{ messages|length }} message{{ messages|length|pluralize }}
@@ -481,13 +496,7 @@
                     </li>
                     <li>
                         <span class="info-label">Source</span>
-                        <span class="info-value">
-                            {% if chat.type == 'bot_chat' %}
-                                Bot (@{{ chat.bot.username }})
-                            {% else %}
-                                Account ({{ chat.account.phone_number }})
-                            {% endif %}
-                        </span>
+                        <span class="info-value">Bot (@{{ chat.bot.username }})</span>
                     </li>
                     <li>
                         <span class="info-label">Created</span>
@@ -568,8 +577,8 @@ document.getElementById('message-form').addEventListener('submit', function(e) {
 function sendMessage(text) {
     // Get chat and entity information from the page
     const chatId = {{ chat.chat_id }};
-    const entityType = '{% if chat.type == "bot_chat" %}bot{% else %}account{% endif %}';
-    const entityId = {% if chat.type == 'bot_chat' and chat.bot %}{{ chat.bot.id }}{% elif chat.type == 'account_chat' and chat.account %}{{ chat.account.id }}{% else %}null{% endif %};
+    const entityType = 'bot';
+    const entityId = {% if chat.bot %}{{ chat.bot.id }}{% else %}null{% endif %};
     
     // Validate that we have all required data
     if (!entityId) {
@@ -586,8 +595,9 @@ function sendMessage(text) {
     submitButton.disabled = true;
     messageInput.disabled = true;
     
-    // Add message to UI immediately for better UX
-    addMessageToUI(text, 'outgoing');
+    // Add message to UI immediately for better UX with loading indicator
+    const tempMessageId = Date.now();
+    addMessageToUI(text, 'outgoing', null, tempMessageId);
     scrollToBottom();
     
     // Send message via API
@@ -613,7 +623,16 @@ function sendMessage(text) {
         
         if (data.success) {
             console.log('Message sent successfully');
-            // Message was already added to UI, no need to add again
+            // Remove the temporary message and add the real one if needed
+            const tempMessage = document.querySelector(`[data-temp-id="${tempMessageId}"]`);
+            if (tempMessage) {
+                tempMessage.classList.remove('temporary-message');
+                // Optionally update with real message ID if returned
+                if (data.message_id) {
+                    tempMessage.setAttribute('data-message-id', data.message_id);
+                    tempMessage.removeAttribute('data-temp-id');
+                }
+            }
         } else {
             throw new Error(data.error || 'Unknown error');
         }
@@ -621,8 +640,11 @@ function sendMessage(text) {
     .catch(error => {
         console.error('Error sending message:', error);
         
-        // Remove the temporary message on error
-        removeTemporaryMessages();
+        // Remove the specific temporary message on error
+        const tempMessage = document.querySelector(`[data-temp-id="${tempMessageId}"]`);
+        if (tempMessage) {
+            tempMessage.remove();
+        }
         
         // Show user-friendly error message
         let errorMsg = 'Failed to send message. ';
@@ -637,17 +659,15 @@ function sendMessage(text) {
         alert(errorMsg);
     })
     .finally(() => {
-        // Always restore button and input state
-        setTimeout(() => {
-            submitButton.innerHTML = originalButtonContent;
-            submitButton.disabled = false;
-            messageInput.disabled = false;
-            messageInput.focus();
-        }, 500);
+        // Always restore button and input state immediately
+        submitButton.innerHTML = originalButtonContent;
+        submitButton.disabled = false;
+        messageInput.disabled = false;
+        messageInput.focus();
     });
 }
 
-function addMessageToUI(text, direction, messageId = null) {
+function addMessageToUI(text, direction, messageId = null, tempId = null) {
     const messagesContainer = document.getElementById('messages-container');
     
     // Remove empty state if present
@@ -662,11 +682,16 @@ function addMessageToUI(text, direction, messageId = null) {
     }
     
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${direction} temporary-message`;
+    messageDiv.className = `message ${direction}`;
+    
     if (messageId) {
         messageDiv.setAttribute('data-message-id', messageId);
+    } else if (tempId) {
+        messageDiv.setAttribute('data-temp-id', tempId);
+        messageDiv.classList.add('temporary-message');
     } else {
         messageDiv.setAttribute('data-temp-id', Date.now());
+        messageDiv.classList.add('temporary-message');
     }
     
     const now = new Date();
@@ -738,6 +763,31 @@ function convertTimestamps() {
                 hour12: false 
             });
             element.textContent = localTime;
+            
+            // Add a title with full date and time
+            element.title = date.toLocaleString();
+        }
+    });
+    
+    // Also convert timestamps without data-timestamp attribute (static ones)
+    const staticTimeElements = document.querySelectorAll('.message-time:not([data-timestamp])');
+    staticTimeElements.forEach(element => {
+        const timeText = element.textContent.trim();
+        // Try to parse time in HH:MM format and convert to current date
+        const timeMatch = timeText.match(/^(\d{1,2}):(\d{2})$/);
+        if (timeMatch) {
+            const now = new Date();
+            const hours = parseInt(timeMatch[1]);
+            const minutes = parseInt(timeMatch[2]);
+            now.setHours(hours, minutes, 0, 0);
+            
+            const localTime = now.toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false 
+            });
+            element.textContent = localTime;
+            element.title = now.toLocaleString();
         }
     });
 }
@@ -798,36 +848,80 @@ function editMessage(messageId, currentText) {
 
 function deleteMessage(messageId) {
     if (confirm('Are you sure you want to delete this message?')) {
+        // Show loading state on the delete button
+        const deleteBtn = document.querySelector(`[data-message-id="${messageId}"] .delete-message-btn`);
+        if (deleteBtn) {
+            const originalText = deleteBtn.innerHTML;
+            deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            deleteBtn.disabled = true;
+        }
+        
         fetch(`/api/messages/${messageId}/delete/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
             }
         })
-        .then(response => response.json())
-        .then(data => {
+        .then(async response => {
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || `HTTP ${response.status}`);
+            }
+            
             if (data.success) {
-                // Remove message from UI
+                // Remove message from UI with animation
                 const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
                 if (messageElement) {
-                    messageElement.style.opacity = '0.5';
-                    messageElement.innerHTML = '<div class="message-text text-muted"><i>Message deleted</i></div>';
-                    setTimeout(() => messageElement.remove(), 2000);
+                    messageElement.style.transition = 'all 0.3s ease';
+                    messageElement.style.opacity = '0.3';
+                    messageElement.style.transform = 'scale(0.95)';
+                    
+                    // Replace content with deleted indicator
+                    const messageText = messageElement.querySelector('.message-text');
+                    if (messageText) {
+                        messageText.innerHTML = '<em class="text-muted">Message deleted</em>';
+                    }
+                    
+                    // Remove completely after delay
+                    setTimeout(() => {
+                        messageElement.style.maxHeight = '0';
+                        messageElement.style.padding = '0';
+                        messageElement.style.margin = '0';
+                        setTimeout(() => messageElement.remove(), 300);
+                    }, 1500);
                 }
                 
                 // Show info message if it's a bot message
                 if (data.message) {
-                    setTimeout(() => {
-                        alert(data.message);
-                    }, 500);
+                    console.log(data.message);
+                    // Don't show alert as it's annoying, just log it
                 }
             } else {
-                alert('Error deleting message: ' + (data.error || 'Unknown error'));
+                throw new Error(data.error || 'Failed to delete message');
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Error deleting message. Please try again.');
+            console.error('Error deleting message:', error);
+            
+            // Restore button state
+            if (deleteBtn) {
+                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                deleteBtn.disabled = false;
+            }
+            
+            // Show user-friendly error
+            let errorMsg = 'Failed to delete message. ';
+            if (error.message.includes('not found')) {
+                errorMsg += 'Message not found.';
+            } else if (error.message.includes('permission')) {
+                errorMsg += 'Permission denied.';
+            } else {
+                errorMsg += 'Please try again.';
+            }
+            
+            alert(errorMsg);
         });
     }
 }

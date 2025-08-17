@@ -97,7 +97,7 @@
     border-bottom: 2px solid var(--border-color);
     padding: 1.5rem 2rem;
     display: flex;
-    justify-content: between;
+    justify-content: space-between;
     align-items: center;
 }
 
@@ -250,7 +250,7 @@
             <p class="stat-label">Active Bots</p>
         </div>
         <div class="stat-item">
-            <h2 class="stat-number">{% now "H:i" %}</h2>
+            <h2 class="stat-number" id="current-time">{% now "H:i" %}</h2>
             <p class="stat-label">Current Time</p>
         </div>
     </div>
@@ -319,7 +319,7 @@
                                 </div>
                                 <div class="chat-meta-item">
                                     <i class="fas fa-clock"></i>
-                                    <span>{{ chat.updated_at|timesince }} ago</span>
+                                    <span class="timesince">{% if chat.last_message_at %}{{ chat.last_message_at|timesince }} ago{% else %}{{ chat.updated_at|timesince }} ago{% endif %}</span>
                                 </div>
                             </div>
                         </div>
@@ -416,6 +416,25 @@ function filterByUnread() {
     });
     event.target.classList.add('active');
 }
+
+// Update current time every second
+function updateCurrentTime() {
+    const timeElement = document.getElementById('current-time');
+    if (timeElement) {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: false 
+        });
+        timeElement.textContent = timeString;
+        timeElement.title = now.toLocaleString();
+    }
+}
+
+// Update time immediately and then every second
+updateCurrentTime();
+setInterval(updateCurrentTime, 1000);
 
 // Auto-refresh every 30 seconds
 setInterval(function() {

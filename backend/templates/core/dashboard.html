@@ -44,9 +44,7 @@
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.stat-card.account-stats {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
+
 
 .stat-card.message-stats {
     background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
@@ -429,7 +427,7 @@
                 <i class="fas fa-chart-line"></i>
             </div>
             <h2 class="stat-number">
-                {% for chat in bot_chats %}{{ chat.unread_count|add:0 }}{% endfor %}{% for chat in account_chats %}{{ chat.unread_count|add:0 }}{% endfor %}
+                {% for chat in bot_chats %}{{ chat.unread_count|add:0 }}{% endfor %}
             </h2>
             <p class="stat-label">Unread Messages</p>
             <div class="stat-details">
@@ -447,7 +445,7 @@
 </div>
 
 <div class="row">
-    <!-- Bot Chats -->
+    <!-- Bot Management -->
     <div class="col-lg-6 mb-4">
         <div class="chat-section">
             <div class="chat-section-header">
@@ -455,44 +453,39 @@
                     <div class="section-icon">
                         <i class="fas fa-robot"></i>
                     </div>
-                    Recent Bot Chats
+                    Bot Management
                 </h5>
                 <a href="{% url 'core:bots' %}" class="view-all-btn">
-                    View All
+                    Manage Bots
                     <i class="fas fa-arrow-right"></i>
                 </a>
             </div>
             <div class="chat-list">
-                {% if bot_chats %}
-                    {% for chat in bot_chats %}
-                        <a href="{% url 'core:chat' chat.id %}" class="text-decoration-none">
+                {% if bots %}
+                    {% for bot in bots %}
+                        <a href="{% url 'core:bots' %}" class="text-decoration-none">
                             <div class="enhanced-chat-item">
                                 <div class="chat-avatar">
                                     <i class="fas fa-robot"></i>
                                 </div>
                                 <div class="chat-content">
                                     <h6 class="chat-title">
-                                        {{ chat.title|default:chat.chat_id }}
+                                        @{{ bot.username }}
                                     </h6>
                                     <div class="chat-meta">
                                         <div class="chat-meta-item">
-                                            <i class="fas fa-user"></i>
-                                            <span>{{ chat.bot.username }}</span>
+                                            <i class="fas fa-info-circle"></i>
+                                            <span>{{ bot.first_name|default:bot.username }}</span>
                                         </div>
                                         <div class="chat-meta-item">
                                             <i class="fas fa-clock"></i>
-                                            <span>{% if chat.last_message_at %}{{ chat.last_message_at|timesince }} ago{% else %}{{ chat.updated_at|timesince }} ago{% endif %}</span>
+                                            <span class="timesince">{% if bot.last_seen %}{{ bot.last_seen|timesince }} ago{% else %}{{ bot.created_at|timesince }} ago{% endif %}</span>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="chat-actions">
-                                    {% if chat.unread_count > 0 %}
-                                        <span class="enhanced-unread-badge">
-                                            {{ chat.unread_count }}
-                                        </span>
-                                    {% endif %}
-                                    <span class="status-badge status-{% if chat.bot.status == 'active' %}active{% else %}inactive{% endif %}">
-                                        {{ chat.bot.status }}
+                                    <span class="status-badge status-{% if bot.status == 'active' %}active{% else %}inactive{% endif %}">
+                                        {{ bot.status }}
                                     </span>
                                 </div>
                             </div>
@@ -503,7 +496,7 @@
                         <div class="empty-state-icon">
                             <i class="fas fa-robot"></i>
                         </div>
-                        <h5>No bot chats yet</h5>
+                        <h5>No bots yet</h5>
                         <p>Create a bot to start monitoring conversations</p>
                     </div>
                 {% endif %}
@@ -511,7 +504,7 @@
         </div>
     </div>
 
-    <!-- All Chats Summary -->
+    <!-- Chat Monitoring -->
     <div class="col-lg-6 mb-4">
         <div class="chat-section">
             <div class="chat-section-header">
@@ -519,10 +512,10 @@
                     <div class="section-icon">
                         <i class="fas fa-comments"></i>
                     </div>
-                    All Active Chats
+                    Recent Conversations
                 </h5>
                 <a href="{% url 'core:chats' %}" class="view-all-btn">
-                    View All
+                    View All Chats
                     <i class="fas fa-arrow-right"></i>
                 </a>
             </div>
@@ -532,7 +525,7 @@
                         <a href="{% url 'core:chat' chat.id %}" class="text-decoration-none">
                             <div class="enhanced-chat-item">
                                 <div class="chat-avatar">
-                                    <i class="fas fa-robot"></i>
+                                    <i class="fas fa-comments"></i>
                                 </div>
                                 <div class="chat-content">
                                     <h6 class="chat-title">
@@ -545,7 +538,7 @@
                                         </div>
                                         <div class="chat-meta-item">
                                             <i class="fas fa-clock"></i>
-                                            <span>{{ chat.updated_at|timesince }} ago</span>
+                                            <span class="timesince">{% if chat.last_message_at %}{{ chat.last_message_at|timesince }} ago{% else %}{{ chat.updated_at|timesince }} ago{% endif %}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -567,8 +560,8 @@
                         <div class="empty-state-icon">
                             <i class="fas fa-comments"></i>
                         </div>
-                        <h5>No chats yet</h5>
-                        <p>Add a bot to start monitoring conversations</p>
+                        <h5>No conversations yet</h5>
+                        <p>Your bot conversations will appear here</p>
                     </div>
                 {% endif %}
             </div>
@@ -602,13 +595,7 @@
             <div class="quick-action-icon">
                 <i class="fas fa-users-cog"></i>
             </div>
-            <h6 class="quick-action-title">Manage Users</h6>
-        </a>
-        <a href="/admin/" target="_blank" class="quick-action-btn">
-            <div class="quick-action-icon">
-                <i class="fas fa-cogs"></i>
-            </div>
-            <h6 class="quick-action-title">System Admin</h6>
+            <h6 class="quick-action-title">User Management</h6>
         </a>
         {% endif %}
     </div>
@@ -617,9 +604,7 @@
 
 {% block extra_js %}
 <script>
-function addAccount() {
-    alert('Account management coming soon! Use the admin panel for now.');
-}
+
 
 function refreshData() {
     location.reload();

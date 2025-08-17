@@ -557,11 +557,14 @@
                             <i class="fas fa-users-cog"></i>
                             User Management
                         </a>
+                        <!-- Admin panel link temporarily hidden -->
+                        <!--
                         <a class="nav-link" href="/admin/" target="_blank">
                             <i class="fas fa-cogs"></i>
                             System Admin
                             <i class="fas fa-external-link-alt ms-auto" style="font-size: 0.75rem;"></i>
                         </a>
+                        -->
                     </div>
                     {% endif %}
                     
@@ -715,11 +718,50 @@
             }
         }
         
+        // Global function to convert all timestamps to local time
+        function convertAllTimestamps() {
+            // Convert timestamps with data-timestamp attribute
+            const timeElements = document.querySelectorAll('[data-timestamp]');
+            timeElements.forEach(element => {
+                const timestamp = element.getAttribute('data-timestamp');
+                if (timestamp) {
+                    const date = new Date(timestamp);
+                    const timeText = date.toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: false 
+                    });
+                    
+                    if (element.classList.contains('full-date')) {
+                        element.textContent = date.toLocaleString();
+                    } else {
+                        element.textContent = timeText;
+                    }
+                    
+                    element.title = date.toLocaleString();
+                }
+            });
+            
+            // Convert Django timesince elements to show time with timezone awareness
+            const timeSinceElements = document.querySelectorAll('.timesince');
+            timeSinceElements.forEach(element => {
+                const originalText = element.textContent;
+                // Add timezone info to the title
+                if (originalText && !element.title) {
+                    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                    element.title = `${originalText} (${timezone})`;
+                }
+            });
+        }
+        
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             // Temporarily disable WebSocket for better performance
             // connectWebSocket();
             requestNotificationPermission();
+            
+            // Convert timestamps to local time
+            convertAllTimestamps();
             
             console.log('🚀 Professional UI loaded successfully');
         });

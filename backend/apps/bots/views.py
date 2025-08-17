@@ -375,15 +375,25 @@ def delete_bot(request, bot_id):
             # Delete the bot
             bot.delete()
             
-            messages.success(request, f'Bot @{bot_username} deleted successfully!')
-            return redirect('core:bots')
+            # Return JSON response for API calls or redirect for form submissions
+            if request.content_type == 'application/json' or request.headers.get('Content-Type') == 'application/json':
+                return JsonResponse({'success': True, 'message': f'Bot @{bot_username} deleted successfully!'})
+            else:
+                messages.success(request, f'Bot @{bot_username} deleted successfully!')
+                return redirect('core:bots')
             
         except Exception as e:
             logger.error(f"Error deleting bot: {e}")
-            messages.error(request, f'Error deleting bot: {str(e)}')
-            return redirect('bots:bot_settings', bot_id=bot_id)
+            if request.content_type == 'application/json' or request.headers.get('Content-Type') == 'application/json':
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+            else:
+                messages.error(request, f'Error deleting bot: {str(e)}')
+                return redirect('bots:bot_settings', bot_id=bot_id)
     
-    return redirect('bots:bot_settings', bot_id=bot_id)
+    if request.content_type == 'application/json' or request.headers.get('Content-Type') == 'application/json':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+    else:
+        return redirect('bots:bot_settings', bot_id=bot_id)
 
 @login_required
 def update_auto_reply(request, bot_id):

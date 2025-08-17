@@ -114,7 +114,7 @@ def send_message(request):
                             )
                         except BotModel.DoesNotExist:
                             logger.error(f"Bot {entity_id} not found or not active")
-                            raise ValueError(f"Bot {entity_id} not found or not active")
+                            raise ValueError("Bot not found or not active. Please check bot status in bot management.")
                     
                     message = asyncio.run(send_with_timeout())
                     
@@ -127,7 +127,8 @@ def send_message(request):
                     
                     return JsonResponse({
                         'success': True,
-                        'message_id': message.message_id if hasattr(message, 'message_id') else None
+                        'message_id': message.message_id if hasattr(message, 'message_id') else None,
+                        'message': 'Message sent successfully'
                     })
                 except asyncio.TimeoutError:
                     logger.error(f"Timeout sending bot message to chat {chat_id}")
