@@ -75,21 +75,26 @@ def bots_view(request):
 
 
 @login_required
-def accounts_view(request):
-    """Accounts management view"""
-    accounts = Account.objects.all().order_by('-created_at')
-    
-    # Get account chats with unread count, sorted by last message time
-    account_chats = Chat.objects.filter(type='account_chat').select_related('account').annotate(
+def chats_view(request):
+    """All chats view"""
+    # Get all bot chats with unread count and related bot info
+    bot_chats = Chat.objects.filter(type='bot_chat').select_related('bot').annotate(
         unread_count=Count('messages', filter=Q(messages__read=False))
-    ).order_by('-last_message_at', '-updated_at')
+    ).order_by('-updated_at')
+    
+    # Get total statistics
+    total_chats = bot_chats.count()
+    total_unread = sum(chat.unread_count for chat in bot_chats)
+    active_bots = Bot.objects.filter(status='active').count()
     
     context = {
-        'accounts': accounts,
-        'account_chats': account_chats,
+        'bot_chats': bot_chats,
+        'total_chats': total_chats,
+        'total_unread': total_unread,
+        'active_bots': active_bots,
     }
     
-    return render(request, 'core/accounts.html', context)
+    return render(request, 'core/chats.html', context)
 
 
 @login_required

@@ -526,21 +526,25 @@
                     </div>
                     
                     <div class="nav-section">
-                        <div class="nav-section-title">MONITORING</div>
+                        <div class="nav-section-title">BOT MANAGEMENT</div>
                         <a class="nav-link {% if request.resolver_match.url_name == 'bots' %}active{% endif %}" 
                            href="{% url 'core:bots' %}">
                             <i class="fas fa-robot"></i>
-                            Bot Management
+                            My Bots
                             {% if bot_stats.total %}
                                 <span class="badge bg-success ms-auto">{{ bot_stats.total }}</span>
                             {% endif %}
                         </a>
-                        <a class="nav-link {% if request.resolver_match.url_name == 'accounts' %}active{% endif %}" 
-                           href="{% url 'core:accounts' %}">
-                            <i class="fas fa-users"></i>
-                            Account Management
-                            {% if account_stats.total %}
-                                <span class="badge bg-info ms-auto">{{ account_stats.total }}</span>
+                    </div>
+                    
+                    <div class="nav-section">
+                        <div class="nav-section-title">CHAT MONITORING</div>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'chats' %}active{% endif %}" 
+                           href="{% url 'core:chats' %}">
+                            <i class="fas fa-comments"></i>
+                            All Chats
+                            {% if bot_chats %}
+                                <span class="badge bg-primary ms-auto">{{ bot_chats|length }}</span>
                             {% endif %}
                         </a>
                     </div>

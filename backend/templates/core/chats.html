@@ -1,0 +1,427 @@
+{% extends 'base.html' %}
+
+{% block title %}All Chats - Telegram Monitoring System{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <i class="fas fa-comments me-2 text-primary"></i>
+            All Chats
+            <small class="text-muted d-block">Monitor all your bot conversations</small>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'core:bots' %}" class="btn btn-outline-primary">
+                <i class="fas fa-robot me-2"></i>
+                Manage Bots
+            </a>
+            <button class="btn btn-primary" onclick="refreshChats()">
+                <i class="fas fa-sync me-2"></i>
+                Refresh
+            </button>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.chat-stats-card {
+    background: var(--primary-gradient);
+    color: white;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.chat-stats-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    transform: rotate(45deg);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+    margin: 0.25rem 0 0;
+}
+
+.chat-filters {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.filter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.chats-container {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+}
+
+.chats-header {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 2px solid var(--border-color);
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: between;
+    align-items: center;
+}
+
+.enhanced-chat-item {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+    background: var(--bg-secondary);
+    cursor: pointer;
+}
+
+.enhanced-chat-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    background: var(--primary-gradient);
+    transition: width 0.3s ease;
+}
+
+.enhanced-chat-item:hover {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    transform: translateX(4px);
+}
+
+.enhanced-chat-item:hover::before {
+    width: 4px;
+}
+
+.enhanced-chat-item:last-child {
+    border-bottom: none;
+}
+
+.chat-avatar {
+    width: 50px;
+    height: 50px;
+    background: var(--primary-gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.chat-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.chat-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.chat-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.chat-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+}
+
+.enhanced-unread-badge {
+    background: var(--danger-gradient);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-sm);
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.status-active {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+}
+
+.status-inactive {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+</style>
+
+<!-- Chat Statistics -->
+<div class="chat-stats-card">
+    <div class="stats-grid">
+        <div class="stat-item">
+            <h2 class="stat-number">{{ total_chats }}</h2>
+            <p class="stat-label">Total Chats</p>
+        </div>
+        <div class="stat-item">
+            <h2 class="stat-number">{{ total_unread }}</h2>
+            <p class="stat-label">Unread Messages</p>
+        </div>
+        <div class="stat-item">
+            <h2 class="stat-number">{{ active_bots }}</h2>
+            <p class="stat-label">Active Bots</p>
+        </div>
+        <div class="stat-item">
+            <h2 class="stat-number">{% now "H:i" %}</h2>
+            <p class="stat-label">Current Time</p>
+        </div>
+    </div>
+</div>
+
+<!-- Chat Filters -->
+<div class="chat-filters">
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <div class="filter-item">
+                <i class="fas fa-search text-muted"></i>
+                <input type="text" class="form-control" id="chatSearch" placeholder="Search chats..." onkeyup="filterChats()">
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="d-flex justify-content-end gap-2">
+                <button class="btn btn-outline-secondary btn-sm" onclick="filterByStatus('all')">
+                    <i class="fas fa-list me-1"></i>All
+                </button>
+                <button class="btn btn-outline-success btn-sm" onclick="filterByStatus('active')">
+                    <i class="fas fa-check-circle me-1"></i>Active
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="filterByUnread()">
+                    <i class="fas fa-envelope me-1"></i>Unread
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- All Chats -->
+<div class="chats-container">
+    <div class="chats-header">
+        <h5 class="mb-0">
+            <i class="fas fa-comments me-2 text-primary"></i>
+            All Bot Chats
+            {% if bot_chats %}
+                <span class="badge bg-primary ms-2">{{ bot_chats|length }}</span>
+            {% endif %}
+        </h5>
+    </div>
+    
+    <div id="chats-list">
+        {% if bot_chats %}
+            {% for chat in bot_chats %}
+                <a href="{% url 'core:chat' chat.id %}" class="text-decoration-none text-dark">
+                    <div class="enhanced-chat-item" 
+                         data-chat-title="{{ chat.title|default:chat.chat_id|lower }}"
+                         data-bot-status="{{ chat.bot.status }}"
+                         data-unread-count="{{ chat.unread_count }}">
+                        <div class="chat-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="chat-content">
+                            <h6 class="chat-title">
+                                {{ chat.title|default:chat.chat_id }}
+                            </h6>
+                            <div class="chat-meta">
+                                <div class="chat-meta-item">
+                                    <i class="fas fa-robot"></i>
+                                    <span>{{ chat.bot.username }}</span>
+                                </div>
+                                <div class="chat-meta-item">
+                                    <i class="fas fa-tag"></i>
+                                    <span>{{ chat.chat_type|default:"private"|title }}</span>
+                                </div>
+                                <div class="chat-meta-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span>{{ chat.updated_at|timesince }} ago</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat-actions">
+                            {% if chat.unread_count > 0 %}
+                                <span class="enhanced-unread-badge">
+                                    {{ chat.unread_count }}
+                                </span>
+                            {% endif %}
+                            <span class="status-badge status-{% if chat.bot.status == 'active' %}active{% else %}inactive{% endif %}">
+                                {{ chat.bot.status }}
+                            </span>
+                        </div>
+                    </div>
+                </a>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <h5>No chats available</h5>
+                <p>Add a bot and start conversations to see them here.</p>
+                <a href="{% url 'core:bots' %}" class="btn btn-primary">
+                    <i class="fas fa-robot me-2"></i>
+                    Manage Bots
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshChats() {
+    location.reload();
+}
+
+function filterChats() {
+    const searchTerm = document.getElementById('chatSearch').value.toLowerCase();
+    const chatItems = document.querySelectorAll('.enhanced-chat-item');
+    
+    chatItems.forEach(item => {
+        const chatTitle = item.getAttribute('data-chat-title');
+        const parentLink = item.closest('a');
+        
+        if (chatTitle.includes(searchTerm)) {
+            parentLink.style.display = 'block';
+        } else {
+            parentLink.style.display = 'none';
+        }
+    });
+}
+
+function filterByStatus(status) {
+    const chatItems = document.querySelectorAll('.enhanced-chat-item');
+    
+    chatItems.forEach(item => {
+        const botStatus = item.getAttribute('data-bot-status');
+        const parentLink = item.closest('a');
+        
+        if (status === 'all' || botStatus === status) {
+            parentLink.style.display = 'block';
+        } else {
+            parentLink.style.display = 'none';
+        }
+    });
+    
+    // Update button states
+    document.querySelectorAll('.btn-outline-secondary, .btn-outline-success').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+
+function filterByUnread() {
+    const chatItems = document.querySelectorAll('.enhanced-chat-item');
+    
+    chatItems.forEach(item => {
+        const unreadCount = parseInt(item.getAttribute('data-unread-count') || '0');
+        const parentLink = item.closest('a');
+        
+        if (unreadCount > 0) {
+            parentLink.style.display = 'block';
+        } else {
+            parentLink.style.display = 'none';
+        }
+    });
+    
+    // Update button states
+    document.querySelectorAll('.btn-outline-secondary, .btn-outline-success, .btn-outline-danger').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+
+// Auto-refresh every 30 seconds
+setInterval(function() {
+    if (document.hasFocus()) {
+        refreshChats();
+    }
+}, 30000);
+</script>
+{% endblock %}

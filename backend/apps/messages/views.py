@@ -117,6 +117,14 @@ def send_message(request):
                             raise ValueError(f"Bot {entity_id} not found or not active")
                     
                     message = asyncio.run(send_with_timeout())
+                    
+                    # Update chat's updated_at timestamp to move it to top
+                    try:
+                        chat = Chat.objects.get(chat_id=chat_id, type='bot_chat')
+                        chat.save(update_fields=['updated_at'])
+                    except Chat.DoesNotExist:
+                        logger.warning(f"Chat with id {chat_id} not found for timestamp update")
+                    
                     return JsonResponse({
                         'success': True,
                         'message_id': message.message_id if hasattr(message, 'message_id') else None
@@ -152,6 +160,14 @@ def send_message(request):
                             raise ValueError(f"Account {entity_id} not found or not active")
                     
                     message = asyncio.run(send_account_with_timeout())
+                    
+                    # Update chat's updated_at timestamp to move it to top
+                    try:
+                        chat = Chat.objects.get(chat_id=chat_id, type='account_chat')
+                        chat.save(update_fields=['updated_at'])
+                    except Chat.DoesNotExist:
+                        logger.warning(f"Chat with id {chat_id} not found for timestamp update")
+                    
                     return JsonResponse({
                         'success': True,
                         'message_id': message.id if hasattr(message, 'id') else None
@@ -241,8 +257,20 @@ def delete_message(request, message_id):
                 except Exception as e:
                     logger.error(f"Error deleting message via Telethon: {e}")
                     raise
+            elif chat.type == 'bot_chat':
+                # For bot messages, we can only delete from our database
+                # Telegram Bot API doesn't allow deleting messages sent by the bot
+                try:
+                    message.delete()
+                    return JsonResponse({
+                        'success': True, 
+                        'message': 'Message removed from monitoring (cannot delete from Telegram)'
+                    })
+                except Exception as e:
+                    logger.error(f"Error deleting bot message from database: {e}")
+                    return JsonResponse({'error': 'Failed to delete message from database'}, status=500)
             else:
-                return JsonResponse({'error': 'Bot messages cannot be deleted via API'}, status=400)
+                return JsonResponse({'error': 'Unknown chat type'}, status=400)
                 
         except Message.DoesNotExist:
             return JsonResponse({'error': 'Message not found'}, status=404)

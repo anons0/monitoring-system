@@ -419,28 +419,18 @@
                                 </div>
                             {% endif %}
                             
-                            <div class="message-time">
+                            <div class="message-time" data-timestamp="{{ message.created_at|date:'c' }}">
                                 {{ message.created_at|date:"H:i" }}
                             </div>
                             
                             <!-- Message Actions -->
-                            {% if message.direction == 'outgoing' %}
-                                <div class="message-actions">
-                                    {% if chat.type == 'account_chat' %}
-                                        <button class="btn btn-sm btn-outline-light edit-message-btn" 
-                                                data-message-id="{{ message.id }}"
-                                                data-message-text="{{ message.text|default:''}}"
-                                                title="Edit Message">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger delete-message-btn" 
-                                                data-message-id="{{ message.id }}"
-                                                title="Delete Message">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
+                            <div class="message-actions">
+                                <button class="btn btn-sm btn-outline-danger delete-message-btn" 
+                                        data-message-id="{{ message.id }}"
+                                        title="Delete Message">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </div>
                     {% endfor %}
                 {% else %}
@@ -589,9 +579,16 @@ function sendMessage(text) {
     
     // Show sending indicator
     const submitButton = document.querySelector('.send-button');
+    const messageInput = document.getElementById('message-input');
     const originalButtonContent = submitButton.innerHTML;
-    submitButton.innerHTML = '<div class="loading"></div>';
+    
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     submitButton.disabled = true;
+    messageInput.disabled = true;
+    
+    // Add message to UI immediately for better UX
+    addMessageToUI(text, 'outgoing');
+    scrollToBottom();
     
     // Send message via API
     fetch('/api/messages/send/', {
@@ -607,28 +604,46 @@ function sendMessage(text) {
             entity_id: entityId
         })
     })
-    .then(response => response.json())
-    .then(data => {
+    .then(async response => {
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || `HTTP ${response.status}`);
+        }
+        
         if (data.success) {
-            // Add message to UI immediately for better UX
-            addMessageToUI(text, 'outgoing');
-            
-            // Scroll to bottom
-            scrollToBottom();
+            console.log('Message sent successfully');
+            // Message was already added to UI, no need to add again
         } else {
-            alert('Error sending message: ' + (data.error || 'Unknown error'));
+            throw new Error(data.error || 'Unknown error');
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        alert('Error sending message. Please try again.');
+        console.error('Error sending message:', error);
+        
+        // Remove the temporary message on error
+        removeTemporaryMessages();
+        
+        // Show user-friendly error message
+        let errorMsg = 'Failed to send message. ';
+        if (error.message.includes('timeout') || error.message.includes('504')) {
+            errorMsg += 'The bot may be starting up. Please try again in a few seconds.';
+        } else if (error.message.includes('not found') || error.message.includes('not active')) {
+            errorMsg += 'The bot is not active. Please check bot status.';
+        } else {
+            errorMsg += 'Please try again.';
+        }
+        
+        alert(errorMsg);
     })
     .finally(() => {
-        // Always restore button state
+        // Always restore button and input state
         setTimeout(() => {
             submitButton.innerHTML = originalButtonContent;
             submitButton.disabled = false;
-        }, 100);
+            messageInput.disabled = false;
+            messageInput.focus();
+        }, 500);
     });
 }
 
@@ -710,8 +725,28 @@ function scrollToBottom() {
     container.scrollTop = container.scrollHeight;
 }
 
-// Scroll to bottom on page load
-window.addEventListener('load', scrollToBottom);
+// Convert timestamps to local time
+function convertTimestamps() {
+    const timeElements = document.querySelectorAll('.message-time[data-timestamp]');
+    timeElements.forEach(element => {
+        const timestamp = element.getAttribute('data-timestamp');
+        if (timestamp) {
+            const date = new Date(timestamp);
+            const localTime = date.toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false 
+            });
+            element.textContent = localTime;
+        }
+    });
+}
+
+// Scroll to bottom on page load and convert timestamps
+window.addEventListener('load', function() {
+    scrollToBottom();
+    convertTimestamps();
+});
 
 // Handle WebSocket notifications for this chat
 document.addEventListener('telegramNotification', function(e) {
@@ -778,6 +813,13 @@ function deleteMessage(messageId) {
                     messageElement.style.opacity = '0.5';
                     messageElement.innerHTML = '<div class="message-text text-muted"><i>Message deleted</i></div>';
                     setTimeout(() => messageElement.remove(), 2000);
+                }
+                
+                // Show info message if it's a bot message
+                if (data.message) {
+                    setTimeout(() => {
+                        alert(data.message);
+                    }, 500);
                 }
             } else {
                 alert('Error deleting message: ' + (data.error || 'Unknown error'));
