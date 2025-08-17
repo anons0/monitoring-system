@@ -35,6 +35,14 @@
     flex-direction: column;
 }
 
+@media (max-width: 768px) {
+    .chat-container {
+        height: calc(100vh - 120px);
+        border-radius: 0;
+        margin: 0 -1rem;
+    }
+}
+
 .chat-header {
     background: var(--bg-secondary);
     border-bottom: 2px solid var(--border-color);
@@ -112,7 +120,7 @@
 }
 
 .message.temporary-message {
-    opacity: 0.7;
+    opacity: 0.8;
     position: relative;
 }
 
@@ -120,14 +128,19 @@
     content: '';
     position: absolute;
     top: 50%;
-    right: 10px;
+    right: 15px;
     transform: translateY(-50%);
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
-    border-top-color: rgba(255, 255, 255, 0.8);
-    animation: spin 1s ease-in-out infinite;
+    border-top-color: rgba(255, 255, 255, 0.9);
+    animation: spin 1s linear infinite;
+}
+
+.message.temporary-message.incoming::after {
+    border: 2px solid rgba(100, 116, 139, 0.3);
+    border-top-color: rgba(100, 116, 139, 0.8);
 }
 
 .message-header {
@@ -347,6 +360,104 @@
     to { transform: translateY(-50%) rotate(360deg); }
 }
 
+/* Mobile Chat Optimizations */
+@media (max-width: 768px) {
+    .chat-header {
+        padding: 1rem;
+    }
+    
+    .chat-title-header {
+        font-size: 1rem;
+    }
+    
+    .chat-subtitle {
+        font-size: 0.8rem;
+    }
+    
+    .chat-actions .btn {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .messages-area {
+        padding: 1rem;
+    }
+    
+    .message {
+        margin: 0.75rem 0;
+        padding: 0.875rem 1rem;
+        max-width: 85%;
+    }
+    
+    .message-header {
+        font-size: 0.7rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .message-text {
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+    
+    .message-time {
+        font-size: 0.7rem;
+        margin-top: 0.25rem;
+    }
+    
+    .message-input-area {
+        padding: 1rem;
+    }
+    
+    .message-input-form {
+        padding: 0.75rem 1rem;
+    }
+    
+    .message-input {
+        font-size: 0.9rem;
+        padding: 0.5rem 0;
+    }
+    
+    .send-button {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .message-actions {
+        top: -35px;
+        right: 5px;
+    }
+    
+    .message-actions .btn {
+        width: 30px;
+        height: 30px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .chat-header {
+        padding: 0.75rem;
+    }
+    
+    .messages-area {
+        padding: 0.75rem;
+    }
+    
+    .message {
+        margin: 0.5rem 0;
+        padding: 0.75rem;
+        max-width: 90%;
+    }
+    
+    .message-input-area {
+        padding: 0.75rem;
+    }
+    
+    .message-input-form {
+        padding: 0.5rem 0.75rem;
+    }
+}
+
 /* Custom scrollbar for messages */
 .messages-area::-webkit-scrollbar {
     width: 8px;
@@ -465,7 +576,7 @@
                     <input type="text" 
                            id="message-input" 
                            class="message-input" 
-                           placeholder="Type your message..." 
+                           placeholder="Type your message... (Ctrl+Enter to send)" 
                            autocomplete="off">
                     <button type="submit" class="send-button" title="Send Message">
                         <i class="fas fa-paper-plane"></i>
@@ -574,6 +685,24 @@ document.getElementById('message-form').addEventListener('submit', function(e) {
     }
 });
 
+// Add keyboard shortcuts
+document.getElementById('message-input').addEventListener('keydown', function(e) {
+    // Send message with Ctrl+Enter or Cmd+Enter
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        const message = this.value.trim();
+        if (message) {
+            sendMessage(message);
+            this.value = '';
+        }
+    }
+    
+    // Escape to clear input
+    if (e.key === 'Escape') {
+        this.value = '';
+    }
+});
+
 function sendMessage(text) {
     // Get chat and entity information from the page
     const chatId = {{ chat.chat_id }};
@@ -623,15 +752,20 @@ function sendMessage(text) {
         
         if (data.success) {
             console.log('Message sent successfully');
-            // Remove the temporary message and add the real one if needed
+            // Convert the temporary message to a permanent one
             const tempMessage = document.querySelector(`[data-temp-id="${tempMessageId}"]`);
             if (tempMessage) {
+                // Remove the loading animation and temporary class
                 tempMessage.classList.remove('temporary-message');
-                // Optionally update with real message ID if returned
+                
+                // Update with real message ID if returned
                 if (data.message_id) {
                     tempMessage.setAttribute('data-message-id', data.message_id);
-                    tempMessage.removeAttribute('data-temp-id');
                 }
+                tempMessage.removeAttribute('data-temp-id');
+                
+                // Remove the loading animation by removing the ::after pseudo-element styling
+                tempMessage.style.opacity = '1';
             }
         } else {
             throw new Error(data.error || 'Unknown error');
@@ -656,7 +790,11 @@ function sendMessage(text) {
             errorMsg += 'Please try again.';
         }
         
-        alert(errorMsg);
+        if (typeof showToast === 'function') {
+            showToast(errorMsg, 'error');
+        } else {
+            alert(errorMsg);
+        }
     })
     .finally(() => {
         // Always restore button and input state immediately

@@ -384,9 +384,7 @@
             <div class="stat-icon">
                 <i class="fas fa-envelope"></i>
             </div>
-            <h2 class="stat-number">
-                {% for chat in bot_chats %}{{ chat.unread_count|add:0 }}{% endfor %}
-            </h2>
+            <h2 class="stat-number">{{ total_unread_messages }}</h2>
             <p class="stat-label">Unread Messages</p>
             <div class="stat-details">
                 <div class="stat-details-item">
@@ -426,9 +424,7 @@
             <div class="stat-icon">
                 <i class="fas fa-chart-line"></i>
             </div>
-            <h2 class="stat-number">
-                {% for chat in bot_chats %}{{ chat.unread_count|add:0 }}{% endfor %}
-            </h2>
+            <h2 class="stat-number">{{ total_unread_messages }}</h2>
             <p class="stat-label">Unread Messages</p>
             <div class="stat-details">
                 <div class="stat-details-item">

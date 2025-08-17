@@ -29,10 +29,14 @@ def dashboard(request):
         unread_count=Count('messages', filter=Q(messages__read=False))
     ).order_by('-last_message_at', '-updated_at')[:10]
     
+    # Calculate total unread messages
+    total_unread_messages = sum(chat.unread_count for chat in bot_chats)
+    
     context = {
         'bot_stats': bot_stats,
         'bots': bots,
         'bot_chats': bot_chats,
+        'total_unread_messages': total_unread_messages,
     }
     
     return render(request, 'core/dashboard.html', context)
@@ -68,10 +72,10 @@ def bots_view(request):
 @login_required
 def chats_view(request):
     """All chats view"""
-    # Get all bot chats with unread count and related bot info
+    # Get all bot chats with unread count and related bot info, sorted by last message time
     bot_chats = Chat.objects.filter(type='bot_chat').select_related('bot').annotate(
         unread_count=Count('messages', filter=Q(messages__read=False))
-    ).order_by('-updated_at')
+    ).order_by('-last_message_at', '-updated_at')
     
     # Get total statistics
     total_chats = bot_chats.count()
