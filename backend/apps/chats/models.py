@@ -17,6 +17,7 @@ class Chat(BaseModel):
     chat_id = models.BigIntegerField()  # Telegram chat ID
     title = models.CharField(max_length=255, null=True, blank=True)
     chat_type = models.CharField(max_length=50, null=True, blank=True)  # private, group, channel
+    last_message_at = models.DateTimeField(null=True, blank=True)  # Track last message time for proper sorting
     
     class Meta:
         db_table = 'chats'
@@ -24,6 +25,7 @@ class Chat(BaseModel):
             models.Index(fields=['type', 'chat_id']),
             models.Index(fields=['bot', 'chat_id']),
             models.Index(fields=['account', 'chat_id']),
+            models.Index(fields=['-last_message_at']),  # Index for sorting by last message time
         ]
         constraints = [
             models.CheckConstraint(
@@ -42,6 +44,14 @@ class Chat(BaseModel):
             raise ValueError("Bot chat cannot have an account assigned")
         if self.type == 'account_chat' and self.bot:
             raise ValueError("Account chat cannot have a bot assigned")
+
+    def update_last_message_time(self):
+        """Update the last_message_at field when a new message is added"""
+        from apps.messages.models import Message
+        last_message = self.messages.order_by('-created_at').first()
+        if last_message:
+            self.last_message_at = last_message.created_at
+            self.save(update_fields=['last_message_at'])
 
     def __str__(self):
         entity = self.bot if self.type == 'bot_chat' else self.account

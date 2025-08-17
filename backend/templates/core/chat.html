@@ -5,18 +5,21 @@
 {% block page_title %}
     <div class="d-flex align-items-center">
         <a href="{% if chat.type == 'bot_chat' %}{% url 'core:bots' %}{% else %}{% url 'core:accounts' %}{% endif %}" 
-           class="btn btn-outline-secondary me-3">
+           class="btn btn-outline-secondary me-3 d-flex align-items-center justify-content-center"
+           style="width: 40px; height: 40px; border-radius: 50%;">
             <i class="fas fa-arrow-left"></i>
         </a>
         <div>
-            {{ chat.title|default:chat.chat_id }}
-            <small class="text-muted d-block">
+            <div class="chat-title mb-1">{{ chat.title|default:chat.chat_id }}</div>
+            <div class="chat-meta">
                 {% if chat.type == 'bot_chat' %}
                     <i class="fas fa-robot me-1"></i>{{ chat.bot.username }}
                 {% else %}
                     <i class="fas fa-user me-1"></i>{{ chat.account.phone_number }}
                 {% endif %}
-            </small>
+                <span class="mx-2">•</span>
+                <span>{{ chat.chat_type|default:"private"|title }} Chat</span>
+            </div>
         </div>
     </div>
 {% endblock %}
@@ -25,126 +28,444 @@
 <!-- Override Django messages for chat page - we don't want alerts here -->
 <style>
 .alert { display: none !important; }
+
+.chat-container {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header {
+    background: var(--bg-secondary);
+    border-bottom: 2px solid var(--border-color);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.chat-title-header {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.chat-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0.25rem 0 0;
+}
+
+.chat-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.chat-actions .btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.3s ease;
+}
+
+.messages-area {
+    flex-grow: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.message {
+    max-width: 70%;
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-lg);
+    position: relative;
+    animation: messageSlideIn 0.3s ease;
+    word-wrap: break-word;
+    line-height: 1.5;
+}
+
+.message.incoming {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    align-self: flex-start;
+    border-bottom-left-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.message.outgoing {
+    background: var(--primary-gradient);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+}
+
+.message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.message-text {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.message-time {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin-top: 0.5rem;
+    text-align: right;
+}
+
+.message.incoming .message-time {
+    text-align: left;
+}
+
+.message-media {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-sm);
+}
+
+.message.incoming .message-media {
+    background: var(--bg-primary);
+}
+
+.message-reply, .message-forward {
+    border-left: 3px solid rgba(255, 255, 255, 0.5);
+    padding-left: 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.8125rem;
+}
+
+.message.incoming .message-reply,
+.message.incoming .message-forward {
+    border-left-color: var(--text-muted);
+}
+
+.message-actions {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    padding: 0.25rem;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+}
+
+.message:hover .message-actions {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.message-input-area {
+    background: var(--bg-secondary);
+    border-top: 2px solid var(--border-color);
+    padding: 1.5rem;
+    flex-shrink: 0;
+}
+
+.message-input-form {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    border-radius: 2rem;
+    padding: 0.75rem 1.25rem;
+    transition: border-color 0.3s ease;
+}
+
+.message-input-form:focus-within {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.message-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+    padding: 0.5rem 0;
+}
+
+.message-input::placeholder {
+    color: var(--text-muted);
+}
+
+.send-button {
+    background: var(--primary-gradient);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.send-button:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
+}
+
+.send-button:disabled {
+    opacity: 0.5;
+    transform: none;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.chat-info-panel {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.info-section {
+    padding: 1.5rem;
+}
+
+.info-section:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.info-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.info-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9375rem;
+}
+
+.info-list li:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.info-value {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+@keyframes messageSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Custom scrollbar for messages */
+.messages-area::-webkit-scrollbar {
+    width: 8px;
+}
+
+.messages-area::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: var(--radius-sm);
+}
+
+.messages-area::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: var(--radius-sm);
+}
+
+.messages-area::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
 </style>
 
 <div class="row">
     <div class="col-12">
-        <div class="card" style="height: 70vh;">
+        <div class="chat-container">
             <!-- Chat Header -->
-            <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-0">{{ chat.title|default:chat.chat_id }}</h6>
-                        <small class="text-muted">
-                            {% if chat.type == 'bot_chat' %}
-                                Bot Chat via @{{ chat.bot.username }}
-                            {% else %}
-                                Account Chat via {{ chat.account.phone_number }}
-                            {% endif %}
-                            | {{ chat.chat_type|default:"private"|title }}
-                        </small>
+            <div class="chat-header">
+                <div class="flex-grow-1">
+                    <h6 class="chat-title-header">{{ chat.title|default:chat.chat_id }}</h6>
+                    <div class="chat-subtitle">
+                        {% if chat.type == 'bot_chat' %}
+                            Bot Chat via @{{ chat.bot.username }}
+                        {% else %}
+                            Account Chat via {{ chat.account.phone_number }}
+                        {% endif %}
+                        | {{ chat.chat_type|default:"private"|title }}
+                        {% if messages %}
+                            | {{ messages|length }} message{{ messages|length|pluralize }}
+                        {% endif %}
                     </div>
-                    <div class="btn-group">
-                        <button class="btn btn-sm btn-outline-primary" onclick="refreshChat()">
-                            <i class="fas fa-sync"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="toggleChatInfo()">
-                            <i class="fas fa-info-circle"></i>
-                        </button>
-                    </div>
+                </div>
+                <div class="chat-actions">
+                    <button class="btn btn-outline-primary" onclick="refreshChat()" title="Refresh Chat">
+                        <i class="fas fa-sync"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="toggleChatInfo()" title="Chat Information">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
                 </div>
             </div>
 
             <!-- Messages Area -->
-            <div class="card-body d-flex flex-column p-0" style="overflow: hidden;">
-                <div id="messages-container" class="flex-grow-1 p-3" style="overflow-y: auto; max-height: calc(70vh - 140px);">
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="message {{ message.direction }}" data-message-id="{{ message.id }}">
-                                <div class="message-header d-flex justify-content-between align-items-center mb-1">
-                                    <small class="text-muted">
-                                        {% if message.direction == 'incoming' %}
-                                            <i class="fas fa-arrow-down me-1"></i>
-                                            From: {{ message.from_id }}
-                                        {% else %}
-                                            <i class="fas fa-arrow-up me-1"></i>
-                                            Sent
-                                        {% endif %}
-                                    </small>
-                                    <small class="text-muted">
-                                        {{ message.created_at|date:"H:i" }}
-                                    </small>
-                                </div>
-                                
-                                {% if message.text %}
-                                    <div class="message-text">{{ message.text|linebreaks }}</div>
-                                {% endif %}
-                                
-                                <!-- Message Actions -->
-                                {% if message.direction == 'outgoing' %}
-                                    <div class="message-actions mt-2" style="display: none;">
-                                        <div class="btn-group btn-group-sm">
-                                            {% if chat.type == 'account_chat' %}
-                                                <button class="btn btn-outline-light btn-sm" 
-                                                        onclick="editMessage({{ message.id }}, '{{ message.text|escapejs }}')"
-                                                        title="Edit Message">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-outline-danger btn-sm" 
-                                                        onclick="deleteMessage({{ message.id }})"
-                                                        title="Delete Message">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            {% else %}
-                                                <small class="text-muted">Bot messages cannot be edited</small>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                {% endif %}
-                                
-                                {% if message.media_type %}
-                                    <div class="message-media">
-                                        <i class="fas fa-{% if message.media_type == 'photo' %}image{% elif message.media_type == 'video' %}video{% elif message.media_type == 'audio' %}music{% elif message.media_type == 'voice' %}microphone{% elif message.media_type == 'document' %}file{% else %}paperclip{% endif %} me-2"></i>
-                                        <span class="badge bg-secondary">{{ message.media_type|title }}</span>
-                                    </div>
-                                {% endif %}
-                                
-                                {% if message.reply_to_message_id %}
-                                    <div class="message-reply mt-2">
-                                        <small class="text-muted">
-                                            <i class="fas fa-reply me-1"></i>
-                                            Reply to message #{{ message.reply_to_message_id }}
-                                        </small>
-                                    </div>
-                                {% endif %}
-                                
-                                {% if message.forwarded_from %}
-                                    <div class="message-forward mt-2">
-                                        <small class="text-muted">
-                                            <i class="fas fa-share me-1"></i>
-                                            Forwarded from {{ message.forwarded_from }}
-                                        </small>
-                                    </div>
-                                {% endif %}
+            <div id="messages-container" class="messages-area">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="message {{ message.direction }}" data-message-id="{{ message.id }}">
+                            <div class="message-header">
+                                <small>
+                                    {% if message.direction == 'incoming' %}
+                                        <i class="fas fa-arrow-down me-1"></i>
+                                        From: {{ message.from_id }}
+                                    {% else %}
+                                        <i class="fas fa-arrow-up me-1"></i>
+                                        Sent
+                                    {% endif %}
+                                </small>
                             </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="text-center p-4">
-                            <i class="fas fa-comments fa-3x text-muted mb-3"></i>
-                            <p class="text-muted">No messages in this chat yet</p>
+                            
+                            {% if message.text %}
+                                <div class="message-text">{{ message.text }}</div>
+                            {% endif %}
+                            
+                            {% if message.media_type %}
+                                <div class="message-media">
+                                    <i class="fas fa-{% if message.media_type == 'photo' %}image{% elif message.media_type == 'video' %}video{% elif message.media_type == 'audio' %}music{% elif message.media_type == 'voice' %}microphone{% elif message.media_type == 'document' %}file{% else %}paperclip{% endif %}"></i>
+                                    <span class="badge bg-secondary">{{ message.media_type|title }}</span>
+                                </div>
+                            {% endif %}
+                            
+                            {% if message.reply_to_message_id %}
+                                <div class="message-reply">
+                                    <i class="fas fa-reply me-1"></i>
+                                    Reply to message #{{ message.reply_to_message_id }}
+                                </div>
+                            {% endif %}
+                            
+                            {% if message.forwarded_from %}
+                                <div class="message-forward">
+                                    <i class="fas fa-share me-1"></i>
+                                    Forwarded from {{ message.forwarded_from }}
+                                </div>
+                            {% endif %}
+                            
+                            <div class="message-time">
+                                {{ message.created_at|date:"H:i" }}
+                            </div>
+                            
+                            <!-- Message Actions -->
+                            {% if message.direction == 'outgoing' %}
+                                <div class="message-actions">
+                                    {% if chat.type == 'account_chat' %}
+                                        <button class="btn btn-sm btn-outline-light edit-message-btn" 
+                                                data-message-id="{{ message.id }}"
+                                                data-message-text="{{ message.text|default:''}}"
+                                                title="Edit Message">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger delete-message-btn" 
+                                                data-message-id="{{ message.id }}"
+                                                title="Delete Message">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
                         </div>
-                    {% endif %}
-                </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <h5>No messages yet</h5>
+                        <p>Start the conversation by sending a message below.</p>
+                    </div>
+                {% endif %}
+            </div>
 
-                <!-- Message Input -->
-                <div class="border-top p-3">
-                    <form id="message-form" class="d-flex align-items-center">
-                        <input type="text" id="message-input" class="form-control me-2" placeholder="Type a message..." autocomplete="off">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </form>
-                </div>
+            <!-- Message Input -->
+            <div class="message-input-area">
+                <form id="message-form" class="message-input-form">
+                    <input type="text" 
+                           id="message-input" 
+                           class="message-input" 
+                           placeholder="Type your message..." 
+                           autocomplete="off">
+                    <button type="submit" class="send-button" title="Send Message">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -153,40 +474,61 @@
 <!-- Chat Info Panel (Hidden by default) -->
 <div id="chat-info" class="row mt-4" style="display: none;">
     <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-info-circle me-2"></i>
+        <div class="chat-info-panel">
+            <div class="info-section">
+                <h5 class="info-title">
+                    <i class="fas fa-info-circle"></i>
                     Chat Information
                 </h5>
+                <ul class="info-list">
+                    <li>
+                        <span class="info-label">Chat ID</span>
+                        <span class="info-value">{{ chat.chat_id }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">Type</span>
+                        <span class="info-value">{{ chat.chat_type|default:"private"|title }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">Source</span>
+                        <span class="info-value">
+                            {% if chat.type == 'bot_chat' %}
+                                Bot (@{{ chat.bot.username }})
+                            {% else %}
+                                Account ({{ chat.account.phone_number }})
+                            {% endif %}
+                        </span>
+                    </li>
+                    <li>
+                        <span class="info-label">Created</span>
+                        <span class="info-value">{{ chat.created_at|date:"M d, Y H:i" }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">Last Updated</span>
+                        <span class="info-value">{{ chat.updated_at|date:"M d, Y H:i" }}</span>
+                    </li>
+                </ul>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Chat Details</h6>
-                        <ul class="list-unstyled">
-                            <li><strong>Chat ID:</strong> {{ chat.chat_id }}</li>
-                            <li><strong>Type:</strong> {{ chat.chat_type|default:"private"|title }}</li>
-                            <li><strong>Source:</strong> 
-                                {% if chat.type == 'bot_chat' %}
-                                    Bot (@{{ chat.bot.username }})
-                                {% else %}
-                                    Account ({{ chat.account.phone_number }})
-                                {% endif %}
-                            </li>
-                            <li><strong>Created:</strong> {{ chat.created_at|date:"Y-m-d H:i" }}</li>
-                            <li><strong>Last Updated:</strong> {{ chat.updated_at|date:"Y-m-d H:i" }}</li>
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Statistics</h6>
-                        <ul class="list-unstyled">
-                            <li><strong>Total Messages:</strong> {{ messages|length }}</li>
-                            <li><strong>Incoming:</strong> {{ incoming_count }}</li>
-                            <li><strong>Outgoing:</strong> {{ outgoing_count }}</li>
-                        </ul>
-                    </div>
-                </div>
+            
+            <div class="info-section">
+                <h5 class="info-title">
+                    <i class="fas fa-chart-bar"></i>
+                    Statistics
+                </h5>
+                <ul class="info-list">
+                    <li>
+                        <span class="info-label">Total Messages</span>
+                        <span class="info-value">{{ messages|length }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">Incoming Messages</span>
+                        <span class="info-value">{{ incoming_count }}</span>
+                    </li>
+                    <li>
+                        <span class="info-label">Outgoing Messages</span>
+                        <span class="info-value">{{ outgoing_count }}</span>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
@@ -195,7 +537,32 @@
 
 {% block extra_js %}
 <script>
-let lastMessageId = {% if messages %}{{ messages.last.id }}{% else %}0{% endif %};
+let lastMessageId = 0;
+
+// Initialize lastMessageId from the DOM
+document.addEventListener('DOMContentLoaded', function() {
+    const messages = document.querySelectorAll('[data-message-id]');
+    if (messages.length > 0) {
+        const lastMessage = messages[messages.length - 1];
+        lastMessageId = parseInt(lastMessage.getAttribute('data-message-id')) || 0;
+    }
+});
+
+// Add event listeners for edit and delete buttons
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.edit-message-btn')) {
+        const btn = e.target.closest('.edit-message-btn');
+        const messageId = btn.getAttribute('data-message-id');
+        const currentText = btn.getAttribute('data-message-text');
+        editMessage(messageId, currentText);
+    }
+    
+    if (e.target.closest('.delete-message-btn')) {
+        const btn = e.target.closest('.delete-message-btn');
+        const messageId = btn.getAttribute('data-message-id');
+        deleteMessage(messageId);
+    }
+});
 
 document.getElementById('message-form').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -221,10 +588,9 @@ function sendMessage(text) {
     }
     
     // Show sending indicator
-    const messageForm = document.getElementById('message-form');
-    const submitButton = messageForm.querySelector('button[type="submit"]');
+    const submitButton = document.querySelector('.send-button');
     const originalButtonContent = submitButton.innerHTML;
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    submitButton.innerHTML = '<div class="loading"></div>';
     submitButton.disabled = true;
     
     // Send message via API
@@ -262,16 +628,22 @@ function sendMessage(text) {
         setTimeout(() => {
             submitButton.innerHTML = originalButtonContent;
             submitButton.disabled = false;
-        }, 100); // Small delay to ensure UI updates properly
+        }, 100);
     });
 }
 
 function addMessageToUI(text, direction, messageId = null) {
     const messagesContainer = document.getElementById('messages-container');
     
+    // Remove empty state if present
+    const emptyState = messagesContainer.querySelector('.empty-state');
+    if (emptyState) {
+        emptyState.remove();
+    }
+    
     // Check if message already exists (prevent duplicates)
     if (messageId && document.querySelector(`[data-message-id="${messageId}"]`)) {
-        return; // Message already exists, don't add duplicate
+        return;
     }
     
     const messageDiv = document.createElement('div');
@@ -279,7 +651,6 @@ function addMessageToUI(text, direction, messageId = null) {
     if (messageId) {
         messageDiv.setAttribute('data-message-id', messageId);
     } else {
-        // Use timestamp as temporary ID for immediate UI updates
         messageDiv.setAttribute('data-temp-id', Date.now());
     }
     
@@ -291,16 +662,14 @@ function addMessageToUI(text, direction, messageId = null) {
     });
     
     messageDiv.innerHTML = `
-        <div class="message-header d-flex justify-content-between align-items-center mb-1">
-            <small class="text-muted">
+        <div class="message-header">
+            <small>
                 <i class="fas fa-arrow-up me-1"></i>
                 Sent
             </small>
-            <small class="text-muted">
-                ${timeString}
-            </small>
         </div>
-        <div class="message-text">${text.replace(/\n/g, '<br>')}</div>
+        <div class="message-text">${text}</div>
+        <div class="message-time">${timeString}</div>
     `;
     
     messagesContainer.appendChild(messageDiv);
@@ -329,6 +698,7 @@ function toggleChatInfo() {
     const chatInfo = document.getElementById('chat-info');
     if (chatInfo.style.display === 'none') {
         chatInfo.style.display = 'block';
+        chatInfo.style.animation = 'fadeIn 0.3s ease';
     } else {
         chatInfo.style.display = 'none';
     }
@@ -360,14 +730,80 @@ document.addEventListener('telegramNotification', function(e) {
     }
 });
 
+// Message edit/delete functions
+function editMessage(messageId, currentText) {
+    const newText = prompt('Edit message:', currentText);
+    if (newText && newText.trim() && newText !== currentText) {
+        fetch(`/api/messages/${messageId}/edit/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ text: newText.trim() })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update message text in UI
+                const messageElement = document.querySelector(`[data-message-id="${messageId}"] .message-text`);
+                if (messageElement) {
+                    messageElement.textContent = newText;
+                }
+            } else {
+                alert('Error editing message: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error editing message. Please try again.');
+        });
+    }
+}
+
+function deleteMessage(messageId) {
+    if (confirm('Are you sure you want to delete this message?')) {
+        fetch(`/api/messages/${messageId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove message from UI
+                const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+                if (messageElement) {
+                    messageElement.style.opacity = '0.5';
+                    messageElement.innerHTML = '<div class="message-text text-muted"><i>Message deleted</i></div>';
+                    setTimeout(() => messageElement.remove(), 2000);
+                }
+            } else {
+                alert('Error deleting message: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting message. Please try again.');
+        });
+    }
+}
+
+// Remove temporary messages (those added by addMessageToUI)
+function removeTemporaryMessages() {
+    const tempMessages = document.querySelectorAll('.temporary-message');
+    tempMessages.forEach(msg => msg.remove());
+}
+
 // Efficiently refresh only messages without full page reload
 function refreshMessagesOnly() {
     const messagesContainer = document.getElementById('messages-container');
     
     // Show loading indicator
     const loadingDiv = document.createElement('div');
-    loadingDiv.className = 'text-center p-2';
-    loadingDiv.innerHTML = '<small class="text-muted"><i class="fas fa-spinner fa-spin"></i> Loading new messages...</small>';
+    loadingDiv.className = 'text-center p-3';
+    loadingDiv.innerHTML = '<div class="loading me-2"></div><span class="text-muted">Loading new messages...</span>';
     messagesContainer.appendChild(loadingDiv);
     
     // Fetch only the updated messages
@@ -414,18 +850,18 @@ function addServerMessageToUI(message) {
     });
     
     messageDiv.innerHTML = `
-        <div class="message-header d-flex justify-content-between align-items-center mb-1">
-            <small class="text-muted">
+        <div class="message-header">
+            <small>
                 <i class="fas fa-arrow-${message.direction === 'incoming' ? 'down' : 'up'} me-1"></i>
                 ${message.direction === 'incoming' ? `From: ${message.from_id}` : 'Sent'}
             </small>
-            <small class="text-muted">${time}</small>
         </div>
-        ${message.text ? `<div class="message-text">${message.text.replace(/\n/g, '<br>')}</div>` : ''}
+        ${message.text ? `<div class="message-text">${message.text}</div>` : ''}
         ${message.media_type ? `<div class="message-media">
-            <i class="fas fa-${getMediaIcon(message.media_type)} me-2"></i>
+            <i class="fas fa-${getMediaIcon(message.media_type)}"></i>
             <span class="badge bg-secondary">${message.media_type}</span>
         </div>` : ''}
+        <div class="message-time">${time}</div>
     `;
     
     messagesContainer.appendChild(messageDiv);
@@ -442,139 +878,7 @@ function getMediaIcon(mediaType) {
     return icons[mediaType] || 'paperclip';
 }
 
-// Remove temporary messages (those added by addMessageToUI)
-function removeTemporaryMessages() {
-    const tempMessages = document.querySelectorAll('.temporary-message');
-    tempMessages.forEach(msg => msg.remove());
-}
-
 // Clean up temporary messages after a delay (fallback)
-setTimeout(removeTemporaryMessages, 10000); // Remove after 10 seconds
-
-// Message edit/delete functions
-function editMessage(messageId, currentText) {
-    const newText = prompt('Edit message:', currentText);
-    if (newText && newText.trim() && newText !== currentText) {
-        fetch(`/api/messages/${messageId}/edit/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({ text: newText.trim() })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Update message text in UI
-                const messageElement = document.querySelector(`[data-message-id="${messageId}"] .message-text`);
-                if (messageElement) {
-                    messageElement.innerHTML = newText.replace(/\n/g, '<br>');
-                }
-            } else {
-                alert('Error editing message: ' + (data.error || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error editing message. Please try again.');
-        });
-    }
-}
-
-function deleteMessage(messageId) {
-    if (confirm('Are you sure you want to delete this message?')) {
-        fetch(`/api/messages/${messageId}/delete/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Remove message from UI
-                const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-                if (messageElement) {
-                    messageElement.style.opacity = '0.5';
-                    messageElement.innerHTML = '<div class="text-muted"><i>Message deleted</i></div>';
-                    setTimeout(() => messageElement.remove(), 2000);
-                }
-            } else {
-                alert('Error deleting message: ' + (data.error || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error deleting message. Please try again.');
-        });
-    }
-}
+setTimeout(removeTemporaryMessages, 10000);
 </script>
-
-<style>
-.message {
-    margin: 0.5rem 0;
-    padding: 0.75rem;
-    border-radius: 1rem;
-    max-width: 70%;
-    animation: fadeIn 0.3s ease;
-}
-
-.message.incoming {
-    background-color: #e9ecef;
-    margin-right: auto;
-    border-bottom-left-radius: 0.25rem;
-}
-
-.message.outgoing {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    margin-left: auto;
-    border-bottom-right-radius: 0.25rem;
-}
-
-.message-text {
-    margin: 0;
-    white-space: pre-wrap;
-}
-
-.message-media {
-    margin-top: 0.5rem;
-}
-
-.message-reply, .message-forward {
-    border-left: 3px solid rgba(255,255,255,0.3);
-    padding-left: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-.message.incoming .message-reply,
-.message.incoming .message-forward {
-    border-left-color: rgba(0,0,0,0.3);
-}
-
-/* Message actions - show on hover */
-.message:hover .message-actions {
-    display: block !important;
-}
-
-.message-actions .btn {
-    opacity: 0.8;
-    transition: opacity 0.2s ease;
-}
-
-.message-actions .btn:hover {
-    opacity: 1;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-#messages-container {
-    scroll-behavior: smooth;
-}
-</style>
 {% endblock %}

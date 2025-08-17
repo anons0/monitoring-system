@@ -27,15 +27,15 @@ def dashboard(request):
         'inactive': Account.objects.filter(status='inactive').count(),
     }
     
-    # Get recent bot chats with unread count
+    # Get recent bot chats with unread count, sorted by last message time
     bot_chats = Chat.objects.filter(type='bot_chat').select_related('bot').annotate(
         unread_count=Count('messages', filter=Q(messages__read=False))
-    ).order_by('-updated_at')[:10]
+    ).order_by('-last_message_at', '-updated_at')[:10]
     
-    # Get recent account chats with unread count
+    # Get recent account chats with unread count, sorted by last message time
     account_chats = Chat.objects.filter(type='account_chat').select_related('account').annotate(
         unread_count=Count('messages', filter=Q(messages__read=False))
-    ).order_by('-updated_at')[:10]
+    ).order_by('-last_message_at', '-updated_at')[:10]
     
     context = {
         'bot_stats': bot_stats,
@@ -60,10 +60,10 @@ def bots_view(request):
         'error': bots.filter(status='error').count(),
     }
     
-    # Get bot chats with unread count
+    # Get bot chats with unread count, sorted by last message time
     bot_chats = Chat.objects.filter(type='bot_chat').select_related('bot').annotate(
         unread_count=Count('messages', filter=Q(messages__read=False))
-    ).order_by('-updated_at')
+    ).order_by('-last_message_at', '-updated_at')
     
     context = {
         'bots': bots,
@@ -79,10 +79,10 @@ def accounts_view(request):
     """Accounts management view"""
     accounts = Account.objects.all().order_by('-created_at')
     
-    # Get account chats with unread count
+    # Get account chats with unread count, sorted by last message time
     account_chats = Chat.objects.filter(type='account_chat').select_related('account').annotate(
         unread_count=Count('messages', filter=Q(messages__read=False))
-    ).order_by('-updated_at')
+    ).order_by('-last_message_at', '-updated_at')
     
     context = {
         'accounts': accounts,

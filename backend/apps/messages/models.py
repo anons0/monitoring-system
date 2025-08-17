@@ -31,6 +31,16 @@ class Message(BaseModel):
             models.Index(fields=['message_id']),
         ]
 
+    def save(self, *args, **kwargs):
+        """Override save to update chat's last_message_at"""
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        
+        # Update chat's last_message_at only when creating new messages
+        if is_new:
+            self.chat.last_message_at = self.created_at
+            self.chat.save(update_fields=['last_message_at'])
+
     def __str__(self):
         preview = self.text[:50] if self.text else f"[{self.media_type}]" if self.media_type else "[Message]"
         return f"{preview} ({self.direction})"

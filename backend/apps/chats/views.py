@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 @method_decorator(login_required, name='dispatch')
 class ChatViewSet(viewsets.ModelViewSet):
     """ViewSet for managing chats"""
-    queryset = Chat.objects.all().order_by('-created_at')
+    queryset = Chat.objects.all().order_by('-last_message_at', '-created_at')
     serializer_class = ChatSerializer
     permission_classes = [IsAuthenticated]
     
@@ -61,7 +61,7 @@ def bot_chats(request):
     try:
         chats = Chat.objects.filter(type='bot_chat').annotate(
             unread_count=Count('messages', filter=Q(messages__read=False))
-        ).select_related('bot').order_by('-created_at')
+        ).select_related('bot').order_by('-last_message_at', '-created_at')
         
         data = []
         for chat in chats:
@@ -76,7 +76,8 @@ def bot_chats(request):
                     'status': chat.bot.status
                 } if chat.bot else None,
                 'unread_count': chat.unread_count,
-                'created_at': chat.created_at
+                'created_at': chat.created_at,
+                'last_message_at': chat.last_message_at
             })
         
         return JsonResponse({'chats': data})
@@ -91,7 +92,7 @@ def account_chats(request):
     try:
         chats = Chat.objects.filter(type='account_chat').annotate(
             unread_count=Count('messages', filter=Q(messages__read=False))
-        ).select_related('account').order_by('-created_at')
+        ).select_related('account').order_by('-last_message_at', '-created_at')
         
         data = []
         for chat in chats:
@@ -106,7 +107,8 @@ def account_chats(request):
                     'status': chat.account.status
                 } if chat.account else None,
                 'unread_count': chat.unread_count,
-                'created_at': chat.created_at
+                'created_at': chat.created_at,
+                'last_message_at': chat.last_message_at
             })
         
         return JsonResponse({'chats': data})

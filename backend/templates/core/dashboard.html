@@ -5,70 +5,439 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <!-- Bot Statistics -->
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card stat-card">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <div class="text-xs font-weight-bold text-uppercase mb-1">Total Bots</div>
-                        <div class="h2 mb-0 font-weight-bold">{{ bot_stats.total }}</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-robot fa-2x text-light opacity-75"></i>
-                    </div>
+<style>
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.stat-card {
+    background: var(--primary-gradient);
+    color: white;
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-xl);
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+    transform: rotate(45deg);
+}
+
+.stat-card.bot-stats {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.stat-card.account-stats {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.stat-card.message-stats {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.stat-card.activity-stats {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.stat-content {
+    position: relative;
+    z-index: 2;
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.9;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 1rem;
+    opacity: 0.9;
+    margin: 0;
+    font-weight: 500;
+}
+
+.stat-details {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.stat-details-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.8;
+}
+
+.stat-details-item:last-child {
+    margin-bottom: 0;
+}
+
+.chat-section {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.chat-section-header {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 2px solid var(--border-color);
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.section-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+}
+
+.view-all-btn {
+    background: var(--primary-gradient);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.view-all-btn:hover {
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.chat-list {
+    padding: 0;
+}
+
+.enhanced-chat-item {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+    background: var(--bg-secondary);
+}
+
+.enhanced-chat-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    background: var(--primary-gradient);
+    transition: width 0.3s ease;
+}
+
+.enhanced-chat-item:hover {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    transform: translateX(4px);
+}
+
+.enhanced-chat-item:hover::before {
+    width: 4px;
+}
+
+.enhanced-chat-item:last-child {
+    border-bottom: none;
+}
+
+.chat-avatar {
+    width: 50px;
+    height: 50px;
+    background: var(--primary-gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.chat-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.chat-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.chat-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.chat-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+}
+
+.enhanced-unread-badge {
+    background: var(--danger-gradient);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-sm);
+    animation: pulse 2s infinite;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.status-active {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+}
+
+.status-inactive {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-muted);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.empty-state h5 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.9375rem;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.quick-actions {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    padding: 2rem;
+}
+
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.quick-action-btn {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    text-align: center;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.quick-action-btn:hover {
+    color: white;
+    background: var(--primary-gradient);
+    border-color: transparent;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.quick-action-icon {
+    font-size: 2rem;
+}
+
+.quick-action-title {
+    font-weight: 600;
+    margin: 0;
+}
+</style>
+
+<!-- Statistics Cards -->
+<div class="stats-grid">
+    <div class="stat-card bot-stats">
+        <div class="stat-content">
+            <div class="stat-icon">
+                <i class="fas fa-robot"></i>
+            </div>
+            <h2 class="stat-number">{{ bot_stats.total }}</h2>
+            <p class="stat-label">Total Bots</p>
+            <div class="stat-details">
+                <div class="stat-details-item">
+                    <span>Active</span>
+                    <strong>{{ bot_stats.active }}</strong>
+                </div>
+                <div class="stat-details-item">
+                    <span>Inactive</span>
+                    <strong>{{ bot_stats.inactive }}</strong>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Active Bots -->
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card bg-success text-white">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <div class="text-xs font-weight-bold text-uppercase mb-1">Active Bots</div>
-                        <div class="h2 mb-0 font-weight-bold">{{ bot_stats.active }}</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-check-circle fa-2x text-light opacity-75"></i>
-                    </div>
+    
+    <div class="stat-card account-stats">
+        <div class="stat-content">
+            <div class="stat-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <h2 class="stat-number">{{ account_stats.total }}</h2>
+            <p class="stat-label">Total Accounts</p>
+            <div class="stat-details">
+                <div class="stat-details-item">
+                    <span>Active</span>
+                    <strong>{{ account_stats.active }}</strong>
+                </div>
+                <div class="stat-details-item">
+                    <span>Inactive</span>
+                    <strong>{{ account_stats.inactive }}</strong>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Total Accounts -->
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card bg-info text-white">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <div class="text-xs font-weight-bold text-uppercase mb-1">Total Accounts</div>
-                        <div class="h2 mb-0 font-weight-bold">{{ account_stats.total }}</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-users fa-2x text-light opacity-75"></i>
-                    </div>
+    
+    <div class="stat-card message-stats">
+        <div class="stat-content">
+            <div class="stat-icon">
+                <i class="fas fa-comments"></i>
+            </div>
+            <h2 class="stat-number">{{ bot_chats|length|add:account_chats|length }}</h2>
+            <p class="stat-label">Active Chats</p>
+            <div class="stat-details">
+                <div class="stat-details-item">
+                    <span>Bot Chats</span>
+                    <strong>{{ bot_chats|length }}</strong>
+                </div>
+                <div class="stat-details-item">
+                    <span>Account Chats</span>
+                    <strong>{{ account_chats|length }}</strong>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Active Accounts -->
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card bg-warning text-white">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <div class="text-xs font-weight-bold text-uppercase mb-1">Active Accounts</div>
-                        <div class="h2 mb-0 font-weight-bold">{{ account_stats.active }}</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-user-check fa-2x text-light opacity-75"></i>
-                    </div>
+    
+    <div class="stat-card activity-stats">
+        <div class="stat-content">
+            <div class="stat-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h2 class="stat-number">
+                {% for chat in bot_chats %}{{ chat.unread_count|add:0 }}{% endfor %}{% for chat in account_chats %}{{ chat.unread_count|add:0 }}{% endfor %}
+            </h2>
+            <p class="stat-label">Unread Messages</p>
+            <div class="stat-details">
+                <div class="stat-details-item">
+                    <span>Last 24h</span>
+                    <strong>Active</strong>
+                </div>
+                <div class="stat-details-item">
+                    <span>Status</span>
+                    <strong>Monitoring</strong>
                 </div>
             </div>
         </div>
@@ -78,44 +447,62 @@
 <div class="row">
     <!-- Bot Chats -->
     <div class="col-lg-6 mb-4">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-robot me-2 text-primary"></i>
+        <div class="chat-section">
+            <div class="chat-section-header">
+                <h5 class="section-title">
+                    <div class="section-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
                     Recent Bot Chats
                 </h5>
-                <a href="{% url 'core:bots' %}" class="btn btn-sm btn-outline-primary">
-                    View All <i class="fas fa-arrow-right ms-1"></i>
+                <a href="{% url 'core:bots' %}" class="view-all-btn">
+                    View All
+                    <i class="fas fa-arrow-right"></i>
                 </a>
             </div>
-            <div class="card-body p-0">
+            <div class="chat-list">
                 {% if bot_chats %}
                     {% for chat in bot_chats %}
-                        <a href="{% url 'core:chat' chat.id %}" class="text-decoration-none text-dark">
-                            <div class="chat-item p-3 border-bottom">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1">
-                                            {{ chat.title|default:chat.chat_id }}
-                                        </h6>
-                                        <small class="text-muted">
-                                            <i class="fas fa-robot me-1"></i>
-                                            {{ chat.bot.username }}
-                                        </small>
+                        <a href="{% url 'core:chat' chat.id %}" class="text-decoration-none">
+                            <div class="enhanced-chat-item">
+                                <div class="chat-avatar">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div class="chat-content">
+                                    <h6 class="chat-title">
+                                        {{ chat.title|default:chat.chat_id }}
+                                    </h6>
+                                    <div class="chat-meta">
+                                        <div class="chat-meta-item">
+                                            <i class="fas fa-user"></i>
+                                            <span>{{ chat.bot.username }}</span>
+                                        </div>
+                                        <div class="chat-meta-item">
+                                            <i class="fas fa-clock"></i>
+                                            <span>{% if chat.last_message_at %}{{ chat.last_message_at|timesince }} ago{% else %}{{ chat.updated_at|timesince }} ago{% endif %}</span>
+                                        </div>
                                     </div>
+                                </div>
+                                <div class="chat-actions">
                                     {% if chat.unread_count > 0 %}
-                                        <span class="badge unread-badge rounded-pill">
+                                        <span class="enhanced-unread-badge">
                                             {{ chat.unread_count }}
                                         </span>
                                     {% endif %}
+                                    <span class="status-badge status-{% if chat.bot.status == 'active' %}active{% else %}inactive{% endif %}">
+                                        {{ chat.bot.status }}
+                                    </span>
                                 </div>
                             </div>
                         </a>
                     {% endfor %}
                 {% else %}
-                    <div class="text-center p-4">
-                        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No bot chats yet</p>
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h5>No bot chats yet</h5>
+                        <p>Create a bot to start monitoring conversations</p>
                     </div>
                 {% endif %}
             </div>
@@ -124,44 +511,62 @@
 
     <!-- Account Chats -->
     <div class="col-lg-6 mb-4">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-users me-2 text-info"></i>
+        <div class="chat-section">
+            <div class="chat-section-header">
+                <h5 class="section-title">
+                    <div class="section-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
                     Recent Account Chats
                 </h5>
-                <a href="{% url 'core:accounts' %}" class="btn btn-sm btn-outline-info">
-                    View All <i class="fas fa-arrow-right ms-1"></i>
+                <a href="{% url 'core:accounts' %}" class="view-all-btn">
+                    View All
+                    <i class="fas fa-arrow-right"></i>
                 </a>
             </div>
-            <div class="card-body p-0">
+            <div class="chat-list">
                 {% if account_chats %}
                     {% for chat in account_chats %}
-                        <a href="{% url 'core:chat' chat.id %}" class="text-decoration-none text-dark">
-                            <div class="chat-item p-3 border-bottom">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1">
-                                            {{ chat.title|default:chat.chat_id }}
-                                        </h6>
-                                        <small class="text-muted">
-                                            <i class="fas fa-user me-1"></i>
-                                            {{ chat.account.phone_number }}
-                                        </small>
+                        <a href="{% url 'core:chat' chat.id %}" class="text-decoration-none">
+                            <div class="enhanced-chat-item">
+                                <div class="chat-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="chat-content">
+                                    <h6 class="chat-title">
+                                        {{ chat.title|default:chat.chat_id }}
+                                    </h6>
+                                    <div class="chat-meta">
+                                        <div class="chat-meta-item">
+                                            <i class="fas fa-phone"></i>
+                                            <span>{{ chat.account.phone_number }}</span>
+                                        </div>
+                                        <div class="chat-meta-item">
+                                            <i class="fas fa-clock"></i>
+                                            <span>{% if chat.last_message_at %}{{ chat.last_message_at|timesince }} ago{% else %}{{ chat.updated_at|timesince }} ago{% endif %}</span>
+                                        </div>
                                     </div>
+                                </div>
+                                <div class="chat-actions">
                                     {% if chat.unread_count > 0 %}
-                                        <span class="badge unread-badge rounded-pill">
+                                        <span class="enhanced-unread-badge">
                                             {{ chat.unread_count }}
                                         </span>
                                     {% endif %}
+                                    <span class="status-badge status-{% if chat.account.status == 'active' %}active{% else %}inactive{% endif %}">
+                                        {{ chat.account.status }}
+                                    </span>
                                 </div>
                             </div>
                         </a>
                     {% endfor %}
                 {% else %}
-                    <div class="text-center p-4">
-                        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No account chats yet</p>
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h5>No account chats yet</h5>
+                        <p>Add an account to start monitoring conversations</p>
                     </div>
                 {% endif %}
             </div>
@@ -170,91 +575,40 @@
 </div>
 
 <!-- Quick Actions -->
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-bolt me-2 text-warning"></i>
-                    Quick Actions
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 mb-3">
-                        <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#addBotModal">
-                            <i class="fas fa-plus me-2"></i>
-                            Add Bot
-                        </button>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <button class="btn btn-info w-100" onclick="addAccount()">
-                            <i class="fas fa-user-plus me-2"></i>
-                            Add Account
-                        </button>
-                    </div>
-                    {% if user.is_superuser %}
-                    <div class="col-md-3 mb-3">
-                        <a href="{% url 'core:user_management' %}" class="btn btn-secondary w-100">
-                            <i class="fas fa-users-cog me-2"></i>
-                            Manage Users
-                        </a>
-                    </div>
-                    {% endif %}
-                    <div class="col-md-3 mb-3">
-                        <button class="btn btn-success w-100" onclick="refreshData()">
-                            <i class="fas fa-sync me-2"></i>
-                            Refresh
-                        </button>
-                    </div>
-                </div>
-            </div>
+<div class="quick-actions">
+    <h5 class="section-title mb-4">
+        <div class="section-icon">
+            <i class="fas fa-bolt"></i>
         </div>
-    </div>
-</div>
-
-<!-- Add Bot Modal -->
-<div class="modal fade" id="addBotModal" tabindex="-1" aria-labelledby="addBotModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="post" action="{% url 'core:add_bot' %}">
-                {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addBotModalLabel">
-                        <i class="fas fa-robot me-2 text-primary"></i>
-                        Add New Bot
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="botToken" class="form-label">Bot Token</label>
-                        <input type="text" class="form-control" id="botToken" name="token" 
-                               placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz" required>
-                        <div class="form-text">
-                            Get your bot token from <a href="https://t.me/BotFather" target="_blank">@BotFather</a> on Telegram.
-                        </div>
-                    </div>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>How to get a bot token:</strong>
-                        <ol class="mb-0 mt-2">
-                            <li>Open Telegram and search for <code>@BotFather</code></li>
-                            <li>Send <code>/newbot</code> command</li>
-                            <li>Follow the instructions to create your bot</li>
-                            <li>Copy the token and paste it above</li>
-                        </ol>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-plus me-2"></i>
-                        Add Bot
-                    </button>
-                </div>
-            </form>
-        </div>
+        Quick Actions
+    </h5>
+    <div class="quick-actions-grid">
+        <a href="{% url 'core:bots' %}" class="quick-action-btn">
+            <div class="quick-action-icon">
+                <i class="fas fa-plus-circle"></i>
+            </div>
+            <h6 class="quick-action-title">Add Bot</h6>
+        </a>
+        <a href="{% url 'core:accounts' %}" class="quick-action-btn">
+            <div class="quick-action-icon">
+                <i class="fas fa-user-plus"></i>
+            </div>
+            <h6 class="quick-action-title">Add Account</h6>
+        </a>
+        {% if user.is_superuser %}
+        <a href="{% url 'core:user_management' %}" class="quick-action-btn">
+            <div class="quick-action-icon">
+                <i class="fas fa-users-cog"></i>
+            </div>
+            <h6 class="quick-action-title">Manage Users</h6>
+        </a>
+        <a href="/admin/" target="_blank" class="quick-action-btn">
+            <div class="quick-action-icon">
+                <i class="fas fa-cogs"></i>
+            </div>
+            <h6 class="quick-action-title">System Admin</h6>
+        </a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
