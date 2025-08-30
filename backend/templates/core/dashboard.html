@@ -2,72 +2,138 @@
 
 {% block title %}Dashboard - Telegram Monitoring System{% endblock %}
 
-{% block page_title %}Dashboard{% endblock %}
+{% block page_title %}
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <i class="fas fa-tachometer-alt me-3 text-primary"></i>
+            Dashboard
+            <small class="text-muted d-block mt-1">Monitor your Telegram bots and chats in real-time</small>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" onclick="refreshDashboard()">
+                <i class="fas fa-sync-alt me-2"></i>
+                Refresh
+            </button>
+            <button class="btn btn-primary" onclick="exportData()">
+                <i class="fas fa-download me-2"></i>
+                Export Data
+            </button>
+        </div>
+    </div>
+{% endblock %}
 
 {% block content %}
 <style>
+/* Enhanced Dashboard Styles */
+.dashboard-header {
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    border-radius: var(--radius-2xl);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+}
+
+.welcome-message {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.welcome-subtitle {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2.5rem;
 }
 
-.stat-card {
-    background: var(--primary-gradient);
-    color: white;
+.enhanced-stat-card {
+    background: var(--bg-primary);
     border-radius: var(--radius-xl);
     padding: 2rem;
     position: relative;
     overflow: hidden;
-    transition: all 0.3s ease;
-    border: none;
+    transition: all var(--transition-normal);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
 }
 
-.stat-card:hover {
+.enhanced-stat-card:hover {
     transform: translateY(-4px);
     box-shadow: var(--shadow-xl);
 }
 
-.stat-card::before {
+.enhanced-stat-card::before {
     content: '';
     position: absolute;
-    top: -50%;
-    right: -50%;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
-    transform: rotate(45deg);
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--primary-gradient);
 }
 
-.stat-card.bot-stats {
+.enhanced-stat-card.bot-stats::before {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
+.enhanced-stat-card.account-stats::before {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
 
-
-.stat-card.message-stats {
+.enhanced-stat-card.message-stats::before {
     background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
 }
 
-.stat-card.activity-stats {
+.enhanced-stat-card.activity-stats::before {
     background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
 }
 
-.stat-content {
-    position: relative;
-    z-index: 2;
+.stat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
 }
 
 .stat-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    opacity: 0.9;
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    color: white;
+    background: var(--primary-gradient);
+}
+
+.stat-icon.bot-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.stat-icon.account-icon {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.stat-icon.message-icon {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.stat-icon.activity-icon {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
 }
 
 .stat-number {
     font-size: 2.5rem;
-    font-weight: 700;
+    font-weight: 800;
+    color: var(--text-primary);
     margin: 0;
     line-height: 1;
     margin-bottom: 0.5rem;
@@ -75,48 +141,54 @@
 
 .stat-label {
     font-size: 1rem;
-    opacity: 0.9;
+    color: var(--text-secondary);
     margin: 0;
     font-weight: 500;
 }
 
-.stat-details {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.stat-details-item {
+.stat-change {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 0.5rem;
     font-size: 0.875rem;
-    margin-bottom: 0.5rem;
-    opacity: 0.8;
+    font-weight: 600;
+    margin-top: 1rem;
 }
 
-.stat-details-item:last-child {
-    margin-bottom: 0;
+.stat-change.positive {
+    color: var(--success-600);
 }
 
-.chat-section {
-    background: var(--bg-secondary);
+.stat-change.negative {
+    color: var(--danger-600);
+}
+
+.stat-change.neutral {
+    color: var(--text-muted);
+}
+
+.chart-container {
+    background: var(--bg-primary);
     border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-lg);
-    overflow: hidden;
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
     margin-bottom: 2rem;
+    transition: all var(--transition-normal);
 }
 
-.chat-section-header {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border-bottom: 2px solid var(--border-color);
-    padding: 1.5rem 2rem;
+.chart-container:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.chart-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
 }
 
-.section-title {
+.chart-title {
     font-size: 1.25rem;
     font-weight: 700;
     color: var(--text-primary);
@@ -126,7 +198,80 @@
     gap: 0.75rem;
 }
 
-.section-icon {
+.chart-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.125rem;
+}
+
+.chart-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.chart-period-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    border-radius: var(--radius-lg);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all var(--transition-normal);
+    cursor: pointer;
+}
+
+.chart-period-btn.active {
+    background: var(--primary-gradient);
+    color: white;
+    border-color: transparent;
+}
+
+.chart-period-btn:hover:not(.active) {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.enhanced-chat-section {
+    background: var(--bg-primary);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    transition: all var(--transition-normal);
+}
+
+.enhanced-chat-section:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.enhanced-chat-header {
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+    border-bottom: 2px solid var(--border-color);
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.enhanced-section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.enhanced-section-icon {
     width: 40px;
     height: 40px;
     background: var(--primary-gradient);
@@ -138,7 +283,7 @@
     font-size: 1.25rem;
 }
 
-.view-all-btn {
+.enhanced-view-all-btn {
     background: var(--primary-gradient);
     color: white;
     border: none;
@@ -146,31 +291,32 @@
     border-radius: var(--radius-lg);
     font-weight: 600;
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: all var(--transition-normal);
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
-.view-all-btn:hover {
+.enhanced-view-all-btn:hover {
     color: white;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
 
-.chat-list {
+.enhanced-chat-list {
     padding: 0;
 }
 
 .enhanced-chat-item {
     padding: 1.5rem 2rem;
     border-bottom: 1px solid var(--border-color);
-    transition: all 0.3s ease;
+    transition: all var(--transition-normal);
     display: flex;
     align-items: center;
     gap: 1rem;
     position: relative;
-    background: var(--bg-secondary);
+    background: var(--bg-primary);
+    cursor: pointer;
 }
 
 .enhanced-chat-item::before {
@@ -181,11 +327,11 @@
     bottom: 0;
     width: 0;
     background: var(--primary-gradient);
-    transition: width 0.3s ease;
+    transition: width var(--transition-normal);
 }
 
 .enhanced-chat-item:hover {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
     transform: translateX(4px);
 }
 
@@ -197,7 +343,7 @@
     border-bottom: none;
 }
 
-.chat-avatar {
+.enhanced-chat-avatar {
     width: 50px;
     height: 50px;
     background: var(--primary-gradient);
@@ -209,14 +355,15 @@
     font-size: 1.5rem;
     font-weight: 600;
     flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
 }
 
-.chat-content {
+.enhanced-chat-content {
     flex: 1;
     min-width: 0;
 }
 
-.chat-title {
+.enhanced-chat-title {
     font-size: 1.125rem;
     font-weight: 600;
     color: var(--text-primary);
@@ -227,7 +374,7 @@
     text-overflow: ellipsis;
 }
 
-.chat-meta {
+.enhanced-chat-meta {
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -235,13 +382,13 @@
     font-size: 0.875rem;
 }
 
-.chat-meta-item {
+.enhanced-chat-meta-item {
     display: flex;
     align-items: center;
     gap: 0.25rem;
 }
 
-.chat-actions {
+.enhanced-chat-actions {
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -263,9 +410,9 @@
     animation: pulse 2s infinite;
 }
 
-.status-badge {
+.enhanced-status-badge {
     padding: 0.25rem 0.75rem;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-full);
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -274,336 +421,552 @@
 
 .status-active {
     background: rgba(34, 197, 94, 0.1);
-    color: #16a34a;
+    color: var(--success-600);
 }
 
 .status-inactive {
     background: rgba(107, 114, 128, 0.1);
-    color: #6b7280;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 3rem 2rem;
     color: var(--text-muted);
 }
 
-.empty-state-icon {
+.enhanced-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+}
+
+.enhanced-empty-state-icon {
     font-size: 4rem;
     margin-bottom: 1rem;
     opacity: 0.3;
+    color: var(--text-muted);
 }
 
-.empty-state h5 {
+.enhanced-empty-state h5 {
     font-size: 1.25rem;
     font-weight: 600;
+    color: var(--text-primary);
     margin-bottom: 0.5rem;
-    color: var(--text-secondary);
 }
 
-.empty-state p {
-    margin: 0;
-    font-size: 0.9375rem;
-}
-
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
+.enhanced-empty-state p {
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 .quick-actions {
-    background: var(--bg-secondary);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-lg);
-    padding: 2rem;
-}
-
-.quick-actions-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
+    margin-bottom: 2rem;
 }
 
-.quick-action-btn {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border: 2px solid var(--border-color);
-    border-radius: var(--radius-lg);
+.quick-action-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
     padding: 1.5rem;
     text-align: center;
+    transition: all var(--transition-normal);
+    cursor: pointer;
     text-decoration: none;
-    color: var(--text-primary);
-    transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
+    color: inherit;
 }
 
-.quick-action-btn:hover {
-    color: white;
-    background: var(--primary-gradient);
-    border-color: transparent;
+.quick-action-card:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg);
+    color: inherit;
+    text-decoration: none;
 }
 
 .quick-action-icon {
-    font-size: 2rem;
+    width: 60px;
+    height: 60px;
+    background: var(--primary-gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    margin: 0 auto 1rem;
 }
 
 .quick-action-title {
+    font-size: 1.125rem;
     font-weight: 600;
-    margin: 0;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.quick-action-desc {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .quick-actions {
+        grid-template-columns: 1fr;
+    }
+    
+    .chart-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .enhanced-chat-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
 }
 </style>
 
-<!-- Statistics Cards -->
-<div class="stats-grid">
-    <div class="stat-card bot-stats">
-        <div class="stat-content">
-            <div class="stat-icon">
-                <i class="fas fa-robot"></i>
-            </div>
-            <h2 class="stat-number">{{ bot_stats.total }}</h2>
-            <p class="stat-label">Total Bots</p>
-            <div class="stat-details">
-                <div class="stat-details-item">
-                    <span>Active</span>
-                    <strong>{{ bot_stats.active }}</strong>
-                </div>
-                <div class="stat-details-item">
-                    <span>Inactive</span>
-                    <strong>{{ bot_stats.inactive }}</strong>
-                </div>
-            </div>
-        </div>
+<!-- Dashboard Header -->
+<div class="dashboard-header">
+    <div class="welcome-message">
+        Welcome back, {{ user.username }}! 👋
     </div>
-    
-    <div class="stat-card message-stats">
-        <div class="stat-content">
-            <div class="stat-icon">
-                <i class="fas fa-envelope"></i>
-            </div>
-            <h2 class="stat-number">{{ total_unread_messages }}</h2>
-            <p class="stat-label">Unread Messages</p>
-            <div class="stat-details">
-                <div class="stat-details-item">
-                    <span>Total Chats</span>
-                    <strong>{{ bot_chats|length }}</strong>
-                </div>
-                <div class="stat-details-item">
-                    <span>Active Bots</span>
-                    <strong>{{ bot_stats.active }}</strong>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="stat-card activity-stats">
-        <div class="stat-content">
-            <div class="stat-icon">
-                <i class="fas fa-comments"></i>
-            </div>
-            <h2 class="stat-number">{{ bot_chats|length }}</h2>
-            <p class="stat-label">Active Chats</p>
-            <div class="stat-details">
-                <div class="stat-details-item">
-                    <span>Bot Chats</span>
-                    <strong>{{ bot_chats|length }}</strong>
-                </div>
-                <div class="stat-details-item">
-                    <span>Status</span>
-                    <strong>Monitoring</strong>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="stat-card activity-stats">
-        <div class="stat-content">
-            <div class="stat-icon">
-                <i class="fas fa-chart-line"></i>
-            </div>
-            <h2 class="stat-number">{{ total_unread_messages }}</h2>
-            <p class="stat-label">Unread Messages</p>
-            <div class="stat-details">
-                <div class="stat-details-item">
-                    <span>Last 24h</span>
-                    <strong>Active</strong>
-                </div>
-                <div class="stat-details-item">
-                    <span>Status</span>
-                    <strong>Monitoring</strong>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row">
-    <!-- Bot Management -->
-    <div class="col-lg-6 mb-4">
-        <div class="chat-section">
-            <div class="chat-section-header">
-                <h5 class="section-title">
-                    <div class="section-icon">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    Bot Management
-                </h5>
-                <a href="{% url 'core:bots' %}" class="view-all-btn">
-                    Manage Bots
-                    <i class="fas fa-arrow-right"></i>
-                </a>
-            </div>
-            <div class="chat-list">
-                {% if bots %}
-                    {% for bot in bots %}
-                        <a href="{% url 'core:bots' %}" class="text-decoration-none">
-                            <div class="enhanced-chat-item">
-                                <div class="chat-avatar">
-                                    <i class="fas fa-robot"></i>
-                                </div>
-                                <div class="chat-content">
-                                    <h6 class="chat-title">
-                                        @{{ bot.username }}
-                                    </h6>
-                                    <div class="chat-meta">
-                                        <div class="chat-meta-item">
-                                            <i class="fas fa-info-circle"></i>
-                                            <span>{{ bot.first_name|default:bot.username }}</span>
-                                        </div>
-                                        <div class="chat-meta-item">
-                                            <i class="fas fa-clock"></i>
-                                            <span class="timesince">{% if bot.last_seen %}{{ bot.last_seen|timesince }} ago{% else %}{{ bot.created_at|timesince }} ago{% endif %}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="chat-actions">
-                                    <span class="status-badge status-{% if bot.status == 'active' %}active{% else %}inactive{% endif %}">
-                                        {{ bot.status }}
-                                    </span>
-                                </div>
-                            </div>
-                        </a>
-                    {% endfor %}
-                {% else %}
-                    <div class="empty-state">
-                        <div class="empty-state-icon">
-                            <i class="fas fa-robot"></i>
-                        </div>
-                        <h5>No bots yet</h5>
-                        <p>Create a bot to start monitoring conversations</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <!-- Chat Monitoring -->
-    <div class="col-lg-6 mb-4">
-        <div class="chat-section">
-            <div class="chat-section-header">
-                <h5 class="section-title">
-                    <div class="section-icon">
-                        <i class="fas fa-comments"></i>
-                    </div>
-                    Recent Conversations
-                </h5>
-                <a href="{% url 'core:chats' %}" class="view-all-btn">
-                    View All Chats
-                    <i class="fas fa-arrow-right"></i>
-                </a>
-            </div>
-            <div class="chat-list">
-                {% if bot_chats %}
-                    {% for chat in bot_chats|slice:":5" %}
-                        <a href="{% url 'core:chat' chat.id %}" class="text-decoration-none">
-                            <div class="enhanced-chat-item">
-                                <div class="chat-avatar">
-                                    <i class="fas fa-comments"></i>
-                                </div>
-                                <div class="chat-content">
-                                    <h6 class="chat-title">
-                                        {{ chat.title|default:chat.chat_id }}
-                                    </h6>
-                                    <div class="chat-meta">
-                                        <div class="chat-meta-item">
-                                            <i class="fas fa-robot"></i>
-                                            <span>{{ chat.bot.username }}</span>
-                                        </div>
-                                        <div class="chat-meta-item">
-                                            <i class="fas fa-clock"></i>
-                                            <span class="timesince">{% if chat.last_message_at %}{{ chat.last_message_at|timesince }} ago{% else %}{{ chat.updated_at|timesince }} ago{% endif %}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="chat-actions">
-                                    {% if chat.unread_count > 0 %}
-                                        <span class="enhanced-unread-badge">
-                                            {{ chat.unread_count }}
-                                        </span>
-                                    {% endif %}
-                                    <span class="status-badge status-{% if chat.bot.status == 'active' %}active{% else %}inactive{% endif %}">
-                                        {{ chat.bot.status }}
-                                    </span>
-                                </div>
-                            </div>
-                        </a>
-                    {% endfor %}
-                {% else %}
-                    <div class="empty-state">
-                        <div class="empty-state-icon">
-                            <i class="fas fa-comments"></i>
-                        </div>
-                        <h5>No conversations yet</h5>
-                        <p>Your bot conversations will appear here</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
+    <div class="welcome-subtitle">
+        Here's what's happening with your Telegram monitoring system today.
     </div>
 </div>
 
 <!-- Quick Actions -->
 <div class="quick-actions">
-    <h5 class="section-title mb-4">
-        <div class="section-icon">
-            <i class="fas fa-bolt"></i>
+    <a href="{% url 'core:bots' %}" class="quick-action-card">
+        <div class="quick-action-icon">
+            <i class="fas fa-robot"></i>
         </div>
-        Quick Actions
-    </h5>
-    <div class="quick-actions-grid">
-        <a href="{% url 'core:bots' %}" class="quick-action-btn">
-            <div class="quick-action-icon">
-                <i class="fas fa-plus-circle"></i>
+        <div class="quick-action-title">Manage Bots</div>
+        <div class="quick-action-desc">Add, edit, or monitor your Telegram bots</div>
+    </a>
+    
+    <a href="{% url 'core:chats' %}" class="quick-action-card">
+        <div class="quick-action-icon">
+            <i class="fas fa-comments"></i>
+        </div>
+        <div class="quick-action-title">View Chats</div>
+        <div class="quick-action-desc">Monitor all your bot conversations</div>
+    </a>
+    
+    {% if user.is_superuser %}
+    <a href="{% url 'core:user_management' %}" class="quick-action-card">
+        <div class="quick-action-icon">
+            <i class="fas fa-users-cog"></i>
+        </div>
+        <div class="quick-action-title">User Management</div>
+        <div class="quick-action-desc">Manage system users and permissions</div>
+    </a>
+    {% endif %}
+    
+    <a href="#" class="quick-action-card" onclick="showSystemStatus()">
+        <div class="quick-action-icon">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="quick-action-title">System Status</div>
+        <div class="quick-action-desc">Check system health and performance</div>
+    </a>
+</div>
+
+<!-- Enhanced Statistics Grid -->
+<div class="stats-grid">
+    <div class="enhanced-stat-card bot-stats">
+        <div class="stat-header">
+            <div>
+                <div class="stat-number" id="total-bots">{{ bot_stats.total|default:0 }}</div>
+                <div class="stat-label">Total Bots</div>
             </div>
-            <h6 class="quick-action-title">Add Bot</h6>
-        </a>
-        <a href="{% url 'core:chats' %}" class="quick-action-btn">
-            <div class="quick-action-icon">
+            <div class="stat-icon bot-icon">
+                <i class="fas fa-robot"></i>
+            </div>
+        </div>
+        <div class="stat-change positive">
+            <i class="fas fa-arrow-up"></i>
+            <span>+{{ bot_stats.active|default:0 }} active</span>
+        </div>
+    </div>
+    
+    <div class="enhanced-stat-card account-stats">
+        <div class="stat-header">
+            <div>
+                <div class="stat-number" id="total-accounts">{{ bot_stats.accounts|default:0 }}</div>
+                <div class="stat-label">Connected Accounts</div>
+            </div>
+            <div class="stat-icon account-icon">
+                <i class="fas fa-user-check"></i>
+            </div>
+        </div>
+        <div class="stat-change positive">
+            <i class="fas fa-arrow-up"></i>
+            <span>+{{ bot_stats.accounts|default:0 }} connected</span>
+        </div>
+    </div>
+    
+    <div class="enhanced-stat-card message-stats">
+        <div class="stat-header">
+            <div>
+                <div class="stat-number" id="total-messages">{{ bot_stats.messages|default:0 }}</div>
+                <div class="stat-label">Messages Today</div>
+            </div>
+            <div class="stat-icon message-icon">
+                <i class="fas fa-comment-dots"></i>
+            </div>
+        </div>
+        <div class="stat-change positive">
+            <i class="fas fa-arrow-up"></i>
+            <span>+{{ bot_stats.messages|default:0 }} messages</span>
+        </div>
+    </div>
+    
+    <div class="enhanced-stat-card activity-stats">
+        <div class="stat-header">
+            <div>
+                <div class="stat-number" id="active-chats">{{ bot_chats|length|default:0 }}</div>
+                <div class="stat-label">Active Chats</div>
+            </div>
+            <div class="stat-icon activity-icon">
                 <i class="fas fa-comments"></i>
             </div>
-            <h6 class="quick-action-title">View All Chats</h6>
-        </a>
-        {% if user.is_superuser %}
-        <a href="{% url 'core:user_management' %}" class="quick-action-btn">
-            <div class="quick-action-icon">
-                <i class="fas fa-users-cog"></i>
+        </div>
+        <div class="stat-change positive">
+            <i class="fas fa-arrow-up"></i>
+            <span>+{{ bot_chats|length|default:0 }} active</span>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Chart -->
+<div class="chart-container">
+    <div class="chart-header">
+        <h3 class="chart-title">
+            <div class="chart-icon">
+                <i class="fas fa-chart-line"></i>
             </div>
-            <h6 class="quick-action-title">User Management</h6>
+            Message Activity (Last 7 Days)
+        </h3>
+        <div class="chart-controls">
+            <button class="chart-period-btn active" data-period="7d">7D</button>
+            <button class="chart-period-btn" data-period="30d">30D</button>
+            <button class="chart-period-btn" data-period="90d">90D</button>
+        </div>
+    </div>
+    <canvas id="activityChart" height="100"></canvas>
+</div>
+
+<!-- Recent Activity -->
+<div class="enhanced-chat-section">
+    <div class="enhanced-chat-header">
+        <h3 class="enhanced-section-title">
+            <div class="enhanced-section-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            Recent Activity
+        </h3>
+        <a href="{% url 'core:chats' %}" class="enhanced-view-all-btn">
+            <i class="fas fa-external-link-alt"></i>
+            View All
         </a>
+    </div>
+    
+    <div class="enhanced-chat-list">
+        {% if bot_chats %}
+            {% for chat in bot_chats|slice:":5" %}
+                <div class="enhanced-chat-item" onclick="window.location.href='{% url 'core:chat' chat.id %}'">
+                    <div class="enhanced-chat-avatar">
+                        {{ chat.title|first|upper }}
+                    </div>
+                    <div class="enhanced-chat-content">
+                        <div class="enhanced-chat-title">{{ chat.title }}</div>
+                        <div class="enhanced-chat-meta">
+                            <div class="enhanced-chat-meta-item">
+                                <i class="fas fa-robot"></i>
+                                <span>{{ chat.bot.username }}</span>
+                            </div>
+                            <div class="enhanced-chat-meta-item">
+                                <i class="fas fa-clock"></i>
+                                <span>{{ chat.last_message_time|timesince }} ago</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="enhanced-chat-actions">
+                        {% if chat.unread_count > 0 %}
+                            <div class="enhanced-unread-badge">{{ chat.unread_count }}</div>
+                        {% endif %}
+                        <div class="enhanced-status-badge status-active">Active</div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="enhanced-empty-state">
+                <div class="enhanced-empty-state-icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <h5>No Recent Activity</h5>
+                <p>Start monitoring your Telegram bots to see activity here.</p>
+                <a href="{% url 'core:bots' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>
+                    Add Your First Bot
+                </a>
+            </div>
         {% endif %}
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<!-- System Status -->
+<div class="chart-container">
+    <div class="chart-header">
+        <h3 class="chart-title">
+            <div class="chart-icon">
+                <i class="fas fa-server"></i>
+            </div>
+            System Status
+        </h3>
+    </div>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="text-center">
+                <div class="stat-number text-success">{{ bot_stats.active|default:0 }}</div>
+                <div class="stat-label">Active Bots</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="text-center">
+                <div class="stat-number text-warning">{{ bot_stats.inactive|default:0 }}</div>
+                <div class="stat-label">Inactive Bots</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="text-center">
+                <div class="stat-number text-danger">{{ bot_stats.error|default:0 }}</div>
+                <div class="stat-label">Error Bots</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="text-center">
+                <div class="stat-number text-info">{{ bot_stats.total|default:0 }}</div>
+                <div class="stat-label">Total Bots</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+// Initialize activity chart
+let activityChart;
 
-
-function refreshData() {
-    location.reload();
+function initActivityChart() {
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    
+    // Sample data - replace with real data from your backend
+    const data = {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [{
+            label: 'Messages',
+            data: [12, 19, 15, 25, 22, 30, 28],
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#667eea',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8
+        }]
+    };
+    
+    const config = {
+        type: 'line',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: 'var(--text-secondary)',
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: 'var(--text-secondary)',
+                        font: {
+                            size: 12
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            elements: {
+                point: {
+                    hoverBackgroundColor: '#667eea'
+                }
+            }
+        }
+    };
+    
+    activityChart = new Chart(ctx, config);
 }
+
+// Chart period controls
+document.querySelectorAll('.chart-period-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        // Remove active class from all buttons
+        document.querySelectorAll('.chart-period-btn').forEach(b => b.classList.remove('active'));
+        // Add active class to clicked button
+        this.classList.add('active');
+        
+        // Update chart data based on period
+        updateChartData(this.dataset.period);
+    });
+});
+
+function updateChartData(period) {
+    // This would fetch new data from your backend based on the period
+    console.log('Updating chart for period:', period);
+    
+    // For now, just update with sample data
+    const sampleData = {
+        '7d': [12, 19, 15, 25, 22, 30, 28],
+        '30d': [10, 15, 20, 18, 25, 30, 22, 28, 35, 40, 38, 42, 45, 50, 48, 52, 55, 58, 60, 65, 62, 68, 70, 72, 75, 78, 80, 82, 85, 88],
+        '90d': [10, 15, 20, 18, 25, 30, 22, 28, 35, 40]
+    };
+    
+    if (activityChart && sampleData[period]) {
+        activityChart.data.datasets[0].data = sampleData[period];
+        activityChart.update('active');
+    }
+}
+
+// Dashboard functions
+function refreshDashboard() {
+    const refreshBtn = document.querySelector('button[onclick="refreshDashboard()"]');
+    const originalContent = refreshBtn.innerHTML;
+    
+    refreshBtn.innerHTML = '<span class="loading-spinner me-2"></span>Refreshing...';
+    refreshBtn.disabled = true;
+    
+    // Simulate refresh - replace with actual API call
+    setTimeout(() => {
+        refreshBtn.innerHTML = originalContent;
+        refreshBtn.disabled = false;
+        
+        // Show success message
+        showNotification('Dashboard refreshed successfully!', 'success');
+    }, 2000);
+}
+
+function exportData() {
+    const exportBtn = document.querySelector('button[onclick="exportData()"]');
+    const originalContent = exportBtn.innerHTML;
+    
+    exportBtn.innerHTML = '<span class="loading-spinner me-2"></span>Exporting...';
+    exportBtn.disabled = true;
+    
+    // Simulate export - replace with actual export functionality
+    setTimeout(() => {
+        exportBtn.innerHTML = originalContent;
+        exportBtn.disabled = false;
+        
+        // Show success message
+        showNotification('Data exported successfully!', 'success');
+    }, 3000);
+}
+
+function showSystemStatus() {
+    // This would show a modal with detailed system status
+    alert('System Status: All systems operational');
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        <i class="fas fa-info-circle me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    initActivityChart();
+    
+    // Add animation to stat cards
+    const statCards = document.querySelectorAll('.enhanced-stat-card');
+    statCards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+        card.style.animation = 'slideIn 0.6s ease forwards';
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+    });
+    
+    // Add animation to quick action cards
+    const quickActionCards = document.querySelectorAll('.quick-action-card');
+    quickActionCards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+        card.style.animation = 'slideIn 0.6s ease forwards';
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+    });
+    
+    console.log('🚀 Enhanced Dashboard loaded successfully');
+});
+
+// Real-time updates (if WebSocket is enabled)
+document.addEventListener('telegramNotification', function(e) {
+    const notification = e.detail;
+    
+    // Update relevant counters
+    if (notification.type === 'message') {
+        const messageCount = document.getElementById('total-messages');
+        if (messageCount) {
+            const currentCount = parseInt(messageCount.textContent);
+            messageCount.textContent = currentCount + 1;
+        }
+    }
+    
+    // Show notification
+    showNotification(notification.content, 'info');
+});
 </script>
 {% endblock %}

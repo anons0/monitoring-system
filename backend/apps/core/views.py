@@ -21,22 +21,27 @@ def dashboard(request):
         'inactive': Bot.objects.filter(status='inactive').count(),
     }
     
-    # Get recent bots for bot management section
-    bots = Bot.objects.all().order_by('-created_at')[:5]
+    account_stats = {
+        'total': Account.objects.count(),
+        'active': Account.objects.filter(status='active').count(),
+        'inactive': Account.objects.filter(status='inactive').count(),
+    }
     
     # Get recent bot chats with unread count, sorted by last message time
     bot_chats = Chat.objects.filter(type='bot_chat').select_related('bot').annotate(
         unread_count=Count('messages', filter=Q(messages__read=False))
     ).order_by('-last_message_at', '-updated_at')[:10]
     
-    # Calculate total unread messages
-    total_unread_messages = sum(chat.unread_count for chat in bot_chats)
+    # Get recent account chats with unread count, sorted by last message time
+    account_chats = Chat.objects.filter(type='account_chat').select_related('account').annotate(
+        unread_count=Count('messages', filter=Q(messages__read=False))
+    ).order_by('-last_message_at', '-updated_at')[:10]
     
     context = {
         'bot_stats': bot_stats,
-        'bots': bots,
+        'account_stats': account_stats,
         'bot_chats': bot_chats,
-        'total_unread_messages': total_unread_messages,
+        'account_chats': account_chats,
     }
     
     return render(request, 'core/dashboard.html', context)
@@ -72,10 +77,10 @@ def bots_view(request):
 @login_required
 def chats_view(request):
     """All chats view"""
-    # Get all bot chats with unread count and related bot info, sorted by last message time
+    # Get all bot chats with unread count and related bot info
     bot_chats = Chat.objects.filter(type='bot_chat').select_related('bot').annotate(
         unread_count=Count('messages', filter=Q(messages__read=False))
-    ).order_by('-last_message_at', '-updated_at')
+    ).order_by('-updated_at')
     
     # Get total statistics
     total_chats = bot_chats.count()
