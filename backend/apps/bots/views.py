@@ -278,6 +278,12 @@ def bulk_update(request):
                 if commands:
                     update_data['commands'] = commands
             
+            # Auto-reply settings
+            if 'auto_reply_enabled' in request.POST:
+                update_data['auto_reply_enabled'] = request.POST.get('auto_reply_enabled') == 'on'
+            if request.POST.get('auto_reply_message'):
+                update_data['auto_reply_message'] = request.POST.get('auto_reply_message')
+            
             # Profile photo
             profile_photo = request.FILES.get('profile_photo')
             
