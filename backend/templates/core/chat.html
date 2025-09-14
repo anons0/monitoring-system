@@ -115,6 +115,17 @@
     box-shadow: var(--shadow-md);
 }
 
+.message-unread {
+    border: 2px solid #ffe066;
+    box-shadow: 0 0 8px #ffe06644;
+    animation: messageHighlight 0.8s;
+}
+
+@keyframes messageHighlight {
+    0% { background: #fffbe6; }
+    100% { background: inherit; }
+}
+
 .message-header {
     display: flex;
     justify-content: space-between;
@@ -381,7 +392,7 @@
             <div id="messages-container" class="messages-area">
                 {% if messages %}
                     {% for message in messages %}
-                        <div class="message {{ message.direction }}" data-message-id="{{ message.id }}">
+                        <div class="message {{ message.direction }} {% if not message.read %}message-unread{% endif %}" data-message-id="{{ message.id }}">
                             <div class="message-header">
                                 <small>
                                     {% if message.direction == 'incoming' %}
@@ -392,38 +403,34 @@
                                         Sent
                                     {% endif %}
                                 </small>
+                                {% if not message.read %}
+                                    <span class="badge bg-warning text-dark ms-2">New</span>
+                                {% endif %}
                             </div>
-                            
                             {% if message.text %}
                                 <div class="message-text">{{ message.text }}</div>
                             {% endif %}
-                            
                             {% if message.media_type %}
                                 <div class="message-media">
                                     <i class="fas fa-{% if message.media_type == 'photo' %}image{% elif message.media_type == 'video' %}video{% elif message.media_type == 'audio' %}music{% elif message.media_type == 'voice' %}microphone{% elif message.media_type == 'document' %}file{% else %}paperclip{% endif %}"></i>
                                     <span class="badge bg-secondary">{{ message.media_type|title }}</span>
                                 </div>
                             {% endif %}
-                            
                             {% if message.reply_to_message_id %}
                                 <div class="message-reply">
                                     <i class="fas fa-reply me-1"></i>
                                     Reply to message #{{ message.reply_to_message_id }}
                                 </div>
                             {% endif %}
-                            
                             {% if message.forwarded_from %}
                                 <div class="message-forward">
                                     <i class="fas fa-share me-1"></i>
                                     Forwarded from {{ message.forwarded_from }}
                                 </div>
                             {% endif %}
-                            
                             <div class="message-time" data-timestamp="{{ message.created_at|date:'c' }}">
                                 {{ message.created_at|date:"H:i" }}
                             </div>
-                            
-                            <!-- Message Actions -->
                             <div class="message-actions">
                                 <button class="btn btn-sm btn-outline-danger delete-message-btn" 
                                         data-message-id="{{ message.id }}"

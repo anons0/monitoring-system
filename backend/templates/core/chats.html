@@ -352,6 +352,16 @@
         min-height: 38px;
     }
 }
+
+.chat-unread {
+    border-left: 4px solid #ffe066;
+    background: linear-gradient(90deg, #fffbe6 0%, var(--bg-secondary) 100%);
+    animation: chatHighlight 0.8s;
+}
+@keyframes chatHighlight {
+    0% { background: #fffbe6; }
+    100% { background: var(--bg-secondary); }
+}
 </style>
 
 <!-- Chat Statistics -->
@@ -417,7 +427,7 @@
         {% if bot_chats %}
             {% for chat in bot_chats %}
                 <a href="{% url 'core:chat' chat.id %}" class="text-decoration-none text-dark">
-                    <div class="enhanced-chat-item" 
+                    <div class="enhanced-chat-item {% if chat.unread_count > 0 %}chat-unread{% endif %}"
                          data-chat-title="{{ chat.title|default:chat.chat_id|lower }}"
                          data-bot-status="{{ chat.bot.status }}"
                          data-unread-count="{{ chat.unread_count }}">
@@ -427,6 +437,9 @@
                         <div class="chat-content">
                             <h6 class="chat-title">
                                 {{ chat.title|default:chat.chat_id }}
+                                {% if chat.unread_count > 0 %}
+                                    <span class="badge bg-warning text-dark ms-2">New</span>
+                                {% endif %}
                             </h6>
                             <div class="chat-meta">
                                 <div class="chat-meta-item">
@@ -449,9 +462,6 @@
                                     {{ chat.unread_count }}
                                 </span>
                             {% endif %}
-                            <span class="status-badge status-{% if chat.bot.status == 'active' %}active{% else %}inactive{% endif %}">
-                                {{ chat.bot.status }}
-                            </span>
                         </div>
                     </div>
                 </a>
@@ -461,12 +471,8 @@
                 <div class="empty-state-icon">
                     <i class="fas fa-comments"></i>
                 </div>
-                <h5>No chats available</h5>
-                <p>Add a bot and start conversations to see them here.</p>
-                <a href="{% url 'core:bots' %}" class="btn btn-primary">
-                    <i class="fas fa-robot me-2"></i>
-                    Manage Bots
-                </a>
+                <h5>No chats found</h5>
+                <p>Start a conversation with your bot to see chats here.</p>
             </div>
         {% endif %}
     </div>
